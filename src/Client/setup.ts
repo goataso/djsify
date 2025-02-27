@@ -162,10 +162,18 @@ export class djsClient {
                     const filePath = path.join(currentDirectory, type, file);
                     type moduleType = SlashCommandFile | ButtonCommandFile | MessageCommandFile;
                     let command: moduleType | { default: moduleType } = require(filePath);
-                    const commandModule: moduleType = 'default' in command ? command.default : command;
+                    if (typeof command === 'object' && 'default' in command) {
+                        command = command.default;
+                    }
+                    if (typeof command !== 'object') {
+                        throw new Error(`Invalid command file: ${filePath}`);
+                    }
+                    const commandModule: moduleType = command;
                     const data = commandModule.data;
                     let result: string | string[] | undefined;
-
+                    if (!data || typeof data !== 'object') {
+                        throw new Error(`Invalid command file: ${filePath}` , { cause: new Error(`Invalid command file: ${filePath}`) });
+                    };
                     if ('customId' in data) {
                         result = data.customId;
                     } else if ('content' in data) {
