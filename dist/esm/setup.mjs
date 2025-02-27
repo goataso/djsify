@@ -23,7 +23,7 @@ program
     console.log(`Starting your bot...`);
     let config;
     try {
-        config = JSON.parse(fs.readFileSync(`${directory}/config.djs.mjson`, 'utf8'));
+        config = JSON.parse(fs.readFileSync(`${directory}/config.djs.json`, 'utf8'));
     }
     catch {
         return console.log('the workspace doesnt have a build file');
@@ -94,7 +94,7 @@ program
         const commandName = answers.commandName;
         const commandDescription = answers.commandDescription;
         const currentDirectory = process.cwd();
-        const file = JSON.parse(fs.readFileSync(currentDirectory + "/config.djs.mjson", "utf8"));
+        const file = JSON.parse(fs.readFileSync(currentDirectory + "/config.djs.json", "utf8"));
         const commandType = answers.commandType.toUpperCase();
         let type;
         if (commandType === "I DONT WANT") {
@@ -307,14 +307,14 @@ ${messageOn ? "/messages" : ""}
         if (messageOn && !fs.existsSync(`${currentDirectory}/messages`)) {
             fs.mkdirSync(currentDirectory + "/messages");
         }
-        fs.writeFileSync(currentDirectory + "/config.djs.mjson", JSON.stringify(data, null, 4));
+        fs.writeFileSync(currentDirectory + "/config.djs.json", JSON.stringify(data, null, 4));
         fs.writeFileSync(currentDirectory + `/index.${typeLanguage.toLowerCase()}`, code);
         const { MessageFileJS, MessageFileTS, buttonFile, buttonFileTS, commandFile, commandFileTS, tsConfig, } = await createSampleFiles();
         fs.writeFileSync(currentDirectory + `/buttons/djs.${typeLanguage.toLowerCase()}`, typeLanguage.toLowerCase() === "js" ? buttonFile : buttonFileTS);
         fs.writeFileSync(currentDirectory + `/slash_commands/ping.${typeLanguage.toLowerCase()}`, typeLanguage.toLowerCase() === "js" ? commandFile : commandFileTS);
         fs.writeFileSync(currentDirectory + `/messages/helloWorld.${typeLanguage.toLowerCase()}`, typeLanguage.toLowerCase() === "js" ? MessageFileJS : MessageFileTS);
         if (typeLanguage.toLowerCase() === "ts") {
-            fs.writeFileSync(currentDirectory + `/tsconfig.mjson`, tsConfig);
+            fs.writeFileSync(currentDirectory + `/tsconfig.json`, tsConfig);
         }
         console.log(`done setuping everything`);
         console.log(`> you can run this application using djs build`);
