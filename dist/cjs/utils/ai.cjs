@@ -38,7 +38,7 @@ class Ai {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}, response: ${await response.text()}`);
             }
-            const chatCompletion = await response.cjson();
+            const chatCompletion = await response.json();
             const responseMessage = chatCompletion.choices[0].message.content;
             const finalMessage = [];
             const limit = 2000;
