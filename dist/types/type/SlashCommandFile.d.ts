@@ -1,5 +1,5 @@
 import { CommandInteraction } from "discord.js";
-import SlashType from "./SlashType.js";
+import SlashType from "./SlashType.cjs";
 declare class SlashCommandFile {
     /**
      * @readonly
