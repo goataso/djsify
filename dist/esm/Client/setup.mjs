@@ -108,10 +108,20 @@ export class djsClient {
             for (const file of directory) {
                 try {
                     const filePath = path.join(currentDirectory, type, file);
-                    let command = require(filePath);
-                    const commandModule = 'default' in command ? command.default : command;
+                    let command = await import(`file:///${filePath}`);
+                    if (typeof command === 'object' && 'default' in command) {
+                        command = command.default;
+                    }
+                    if (typeof command !== 'object') {
+                        throw new Error(`Invalid command file: ${filePath}`);
+                    }
+                    const commandModule = command;
                     const data = commandModule.data;
                     let result;
+                    if (!data || typeof data !== 'object') {
+                        throw new Error(`Invalid command file: ${filePath}`, { cause: new Error(`Invalid command file: ${filePath}`) });
+                    }
+                    ;
                     if ('customId' in data) {
                         result = data.customId;
                     }
