@@ -1,0 +1,61 @@
+{
+  "name": "djsify",
+  "version": "1.6.4",
+  "main": "dist/cjs/index.cjs",
+  "module": "dist/esm/index.mjs",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": {
+        "types": "./dist/types/index.d.ts",
+        "default": "./dist/esm/index.mjs"
+      },
+      "require": {
+        "types": "./dist/types/index.d.ts",
+        "default": "./dist/cjs/index.cjs"
+      }
+    }
+  },
+  "type": "module",
+  "bin": {
+    "djs": "dist/cli.js"
+  },
+  "keywords": [
+    "discord",
+    "discord.js",
+    "discord bot",
+    "djs",
+    "ai",
+    "artificial intelligence",
+    "bot framework",
+    "npm package",
+    "chatbot",
+    "message commands",
+    "slash commands",
+    "button commands",
+    "djsify",
+    "discord API",
+    "automation",
+    "open source",
+    "javascript",
+    "typescript"
+  ],
+  "scripts": {
+    "build": "rimraf dist && tsc --project tsconfig.cjs.json && tsc",
+    "build:cjs": "tsc --project tsconfig.cjs.json",
+    "build:esm": "tsc"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "inquirer": "^12.4.1"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.7",
+    "@types/node": "^16.0.0",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.6.3"
+  }
+}
