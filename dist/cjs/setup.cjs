@@ -28,7 +28,7 @@ program
     console.log(`Starting your bot...`);
     let config;
     try {
-        config = JSON.parse(fs_1.default.readFileSync(`${directory}/config.djs.cjson`, 'utf8'));
+        config = JSON.parse(fs_1.default.readFileSync(`${directory}/config.djs.json`, 'utf8'));
     }
     catch {
         return console.log('the workspace doesnt have a build file');
@@ -99,7 +99,7 @@ program
         const commandName = answers.commandName;
         const commandDescription = answers.commandDescription;
         const currentDirectory = process.cwd();
-        const file = JSON.parse(fs_1.default.readFileSync(currentDirectory + "/config.djs.cjson", "utf8"));
+        const file = JSON.parse(fs_1.default.readFileSync(currentDirectory + "/config.djs.json", "utf8"));
         const commandType = answers.commandType.toUpperCase();
         let type;
         if (commandType === "I DONT WANT") {
@@ -312,14 +312,14 @@ ${messageOn ? "/messages" : ""}
         if (messageOn && !fs_1.default.existsSync(`${currentDirectory}/messages`)) {
             fs_1.default.mkdirSync(currentDirectory + "/messages");
         }
-        fs_1.default.writeFileSync(currentDirectory + "/config.djs.cjson", JSON.stringify(data, null, 4));
+        fs_1.default.writeFileSync(currentDirectory + "/config.djs.json", JSON.stringify(data, null, 4));
         fs_1.default.writeFileSync(currentDirectory + `/index.${typeLanguage.toLowerCase()}`, code);
         const { MessageFileJS, MessageFileTS, buttonFile, buttonFileTS, commandFile, commandFileTS, tsConfig, } = await createSampleFiles();
         fs_1.default.writeFileSync(currentDirectory + `/buttons/djs.${typeLanguage.toLowerCase()}`, typeLanguage.toLowerCase() === "js" ? buttonFile : buttonFileTS);
         fs_1.default.writeFileSync(currentDirectory + `/slash_commands/ping.${typeLanguage.toLowerCase()}`, typeLanguage.toLowerCase() === "js" ? commandFile : commandFileTS);
         fs_1.default.writeFileSync(currentDirectory + `/messages/helloWorld.${typeLanguage.toLowerCase()}`, typeLanguage.toLowerCase() === "js" ? MessageFileJS : MessageFileTS);
         if (typeLanguage.toLowerCase() === "ts") {
-            fs_1.default.writeFileSync(currentDirectory + `/tsconfig.cjson`, tsConfig);
+            fs_1.default.writeFileSync(currentDirectory + `/tsconfig.json`, tsConfig);
         }
         console.log(`done setuping everything`);
         console.log(`> you can run this application using djs build`);
