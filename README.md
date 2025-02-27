@@ -176,6 +176,7 @@ Message commands are triggered by regular text messages in Discord channels.
 
 **Basic Message Command:**
 
+```javascript
 import { MessageCommandFile } from "djsify";
 import { Message } from "discord.js";
 
@@ -208,8 +209,11 @@ const Command = {
 };
 
 export default Command;
+```
 
 **Command with Arguments:**
+
+```javascript
 
 import { MessageCommandFile } from "djsify";
 
@@ -228,13 +232,13 @@ const Command = {
 };
 
 export default Command;
-
+```
 ## ⚡ Slash Commands
 
 Slash commands let users interact with your bot using / commands.
 
 **Basic Slash Command:**
-
+```javascript
 import { SlashCommandFile } from "djsify";
 
 const Command = {
@@ -249,9 +253,9 @@ const Command = {
 };
 
 export default Command;
-
+```
 **Slash Command with Options:**
-
+```javascript
 import { SlashCommandFile } from "djsify";
 import { OptionType } from "djsify";
 
@@ -286,13 +290,13 @@ const Command = {
 };
 
 export default Command;
-
+```
 ## 🔘 Button Commands
 
 Button commands let your bot respond when users click buttons.
 
 **Basic Button Command:**
-
+```javascript
 import { ButtonCommandFile } from "djsify";
 
 const Command = {
@@ -306,9 +310,9 @@ const Command = {
 };
 
 export default Command;
-
+```
 **Button Command with Dynamic ID:**
-
+```javascript
 import { ButtonCommandFile } from "djsify";
 
 const Command = {
@@ -330,25 +334,25 @@ const Command = {
 
       await interaction.reply({
         content: "Message deleted!",
-        ephemeral: true
+        flags: 64
       });
     } catch (error) {
       await interaction.reply({
         content: "Failed to delete message!",
-        ephemeral: true
+        flags: 64
       });
     }
   }
 };
 
 export default Command;
-
+```
 ## 🧠 AI Integration
 
 Use AI to make your bot smarter with Groq integration.
 
 **AI Chat Command:**
-
+```javascript
 import { Ai, MessageCommandFile } from "djsify";
 import { Message } from "discord.js";
 
@@ -390,9 +394,9 @@ const Command = {
 };
 
 export default Command;
-
+```
 **AI Code Generator:**
-
+```javascript
 import { Ai, SlashCommandFile } from "djsify";
 import { OptionType } from "djsify";
 import { EmbedBuilder } from "discord.js";
@@ -451,7 +455,7 @@ const Command = {
 };
 
 export default Command;
-
+```
 ## 🎨 Styling with Colors
 
 djsify includes a rich set of predefined colors for embeds:
