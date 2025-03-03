@@ -3,7 +3,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.djsClient = void 0;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const discord_js_1 = require("discord.js");
@@ -40,8 +39,8 @@ class djsClient {
     buttonDirectoryName = 'buttons';
     slashCommandDirectoryName = 'slash_commands';
     messageCommandDirectoryName = 'messages';
-    token = '';
     allowedGuilds = new Set([]);
+    token = '';
     addAllowedGuilds(guildId) {
         this.allowedGuilds.add(guildId);
         return this.allowedGuilds;
@@ -75,7 +74,40 @@ class djsClient {
         await this.client.login(this.token);
     }
     ;
-    constructor({ token, buttonOn, slashCommandsOn, messageCommandsOn, slashCommandDir, ButtonCommandDir, messageCommandDir, status, activityName, activityType, restTimeout, sharding, intents, partials, prefex, allowBots, allowDM, isPrivateBot, }) {
+    ready() {
+        if (this.client.isReady()) {
+            return true;
+        }
+        ;
+        return new Promise(resolve => {
+            this.client.on('ready', () => {
+                resolve(true);
+            });
+        });
+    }
+    /**
+     * @param {Object} options - The configuration options for the client
+     * @param {string} options.token - The Discord bot token
+     * @param {boolean} [options.buttonOn=false] - Whether to enable button commands
+     * @param {boolean} [options.slashCommandsOn=false] - Whether to enable slash commands
+     * @param {boolean} [options.messageCommandsOn=false] - Whether to enable message commands
+     * @param {string} [options.slashCommandDir] - Directory for slash commands
+     * @param {string} [options.ButtonCommandDir] - Directory for button commands
+     * @param {string} [options.messageCommandDir] - Directory for message commands
+     * @param {('online'|'idle'|'dnd'|'invisible')} [options.status='online'] - Bot status
+     * @param {string} [options.activityName] - Activity name for bot status
+     * @param {string} [options.activityType='Playing'] - Activity type for bot status
+     * @param {number} [options.restTimeout=25000] - REST API timeout
+     * @param {(number|'auto'|readonly number[])} [options.sharding='auto'] - Sharding configuration
+     * @param {Array} [options.intents] - Gateway intents
+     * @param {Array} [options.partials] - Partial structures
+     * @param {string} [options.prefex] - deprecated Use 'prefix' instead
+     * @param {string} [options.prefix=''] - Command prefix
+     * @param {boolean} [options.allowBots=false] - Allow bot interactions
+     * @param {boolean} [options.allowDM=true] - Allow DM interactions
+     * @param {boolean} [options.isPrivateBot=false] - Private bot mode
+     */
+    constructor({ token, buttonOn = false, slashCommandsOn = false, messageCommandsOn = false, slashCommandDir, ButtonCommandDir, messageCommandDir, status = 'online', activityName, activityType = 'Playing', restTimeout = 25000, sharding = 'auto', intents, partials, prefex, prefix = '', allowBots = false, allowDM = true, isPrivateBot = false, }) {
         const selectedIntents = intents
             ? intents.map(intent => discord_js_1.GatewayIntentBits[intent])
             : Object.values(discord_js_1.GatewayIntentBits).filter((x) => typeof x === 'number');
@@ -96,6 +128,7 @@ class djsClient {
             shards: sharding || 'auto',
             rest: { timeout: restTimeout || 25000 }
         });
+        this.client.djsClient = this;
         if (typeof token !== "string" || token.length < 59) {
             throw new Error(`Invalid token was provided. Error occurred at:\n${new Error().stack?.split("\n")[2]?.trim() || "Unknown location"}\n
   The error happened because the provided token was not a string or it's not well formatted as a Discord bot token!\n`);
@@ -103,6 +136,11 @@ class djsClient {
         this.client.buttons = new discord_js_1.Collection();
         this.client.slashCommands = new discord_js_1.Collection();
         this.client.messageCommands = new discord_js_1.Collection();
+        if (prefex) {
+            console.warn(`[djsify] The 'prefex' option is deprecated and will be removed in the next major release. Use 'prefix' instead.`);
+        }
+        ;
+        const Prefix = prefix || prefex || '';
         const commands = new Set([]);
         const currentDirectory = process.cwd();
         const readDirectory = (dir) => fs_1.default.existsSync(`${currentDirectory}/${dir}`) ? fs_1.default.readdirSync(`${currentDirectory}/${dir}`).filter(f => f.endsWith('.cjs') || f.endsWith('.ts')) : [];
@@ -142,7 +180,7 @@ class djsClient {
                         if (key) {
                             addedCommands.push(key);
                             if ('content' in commandModule.data && typeof commandModule.data.content === 'string') {
-                                commandModule.data.content = prefex + commandModule.data.content;
+                                commandModule.data.content = Prefix + commandModule.data.content;
                             }
                             collection.set(key, commandModule);
                             if (onLoad)
@@ -169,7 +207,7 @@ class djsClient {
                 const command = this.client?.slashCommands?.get(i.commandName);
                 if (!command)
                     return;
-                if (isPrivateBot && (!i.guild || !this.allowedGuilds.has(i?.guildId))) {
+                if (isPrivateBot && (!i.guild || !this.allowedGuilds.has(i.guildId))) {
                     return i.isRepliable() && i.reply({
                         embeds: [{
                                 title: `** This Server is not allowed to use this bot! **`,
@@ -178,7 +216,8 @@ class djsClient {
                     });
                 }
                 try {
-                    await command.execute(i);
+                    Object.assign(i.client, { djsClient: this });
+                    await command.execute(Object.assign(i, { djsClient: this }));
                 }
                 catch (err) {
                     consoleError(err);
@@ -218,9 +257,10 @@ class djsClient {
                 const customIds = Array.isArray(command.data.customId) ? command.data.customId : [command.data.customId];
                 customIds.forEach(customId => buttonCommands.set(customId, command));
             });
-            this.client.on('interactionCreate', async (i) => {
-                if (!i.isButton())
+            this.client.on('interactionCreate', async (interaction) => {
+                if (!interaction.isButton())
                     return;
+                const i = interaction;
                 if (isPrivateBot && (!i.guild || !this.allowedGuilds.has(i.guildId))) {
                     return i.isRepliable() && i.reply({
                         embeds: [{
@@ -248,6 +288,8 @@ class djsClient {
                             (command.data.includes && i.customId.includes(command.data.customId)) ||
                             (command.data.endsWith && i.customId.endsWith(command.data.customId)) ||
                             i.customId === command.data.customId;
+                    Object.assign(i, { djsClient: this });
+                    Object.assign(i.client, { djsClient: this });
                     if (shouldExecute)
                         await command.execute(i);
                 }
@@ -287,10 +329,10 @@ class djsClient {
                     return;
                 if (!allowDM && m.channel.type === discord_js_1.ChannelType.DM)
                     return;
-                if (prefex && !m.content.startsWith(prefex))
+                if (Prefix && !m.content.startsWith(Prefix))
                     return;
                 const args = m.content.trim().split(/\s+/);
-                const commandName = args[0].toLowerCase().replace(prefex || '', '');
+                const commandName = args[0].toLowerCase().replace(Prefix || '', '');
                 const command = this.client.messageCommands?.get(commandName);
                 if (!command)
                     return;
@@ -312,8 +354,9 @@ class djsClient {
                         });
                     }
                     ;
+                    Object.assign(m.client, { djsClient: this });
                     if (shouldExecute)
-                        await command.execute(m);
+                        await command.execute(Object.assign(m, { djsClient: this }));
                 }
                 catch (err) {
                     consoleError(err);
@@ -349,7 +392,6 @@ class djsClient {
         });
     }
 }
-exports.djsClient = djsClient;
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
@@ -367,3 +409,4 @@ process.on('SIGTERM', () => {
 process.on('exit', (code) => {
     console.log(`Process exited with code: ${code}`);
 });
+exports.default = djsClient;
