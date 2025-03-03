@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.djsClient = exports.Colors = exports.Ai = exports.OptionType = exports.SlashCommand = exports.MessageCommandFile = exports.ButtonCommandFile = exports.SlashCommandFile = void 0;
 const SlashCommandFile_js_1 = require("./type/SlashCommandFile.cjs");
@@ -14,6 +17,6 @@ Object.defineProperty(exports, "SlashCommand", { enumerable: true, get: function
 Object.defineProperty(exports, "OptionType", { enumerable: true, get: function () { return SlashCommand_js_1.OptionType; } });
 const Colors_js_1 = require("./utils/Colors.cjs");
 Object.defineProperty(exports, "Colors", { enumerable: true, get: function () { return Colors_js_1.Colors; } });
-const setup_js_1 = require("./Client/setup.cjs");
-Object.defineProperty(exports, "djsClient", { enumerable: true, get: function () { return setup_js_1.djsClient; } });
-exports.default = setup_js_1.djsClient;
+const setup_js_1 = __importDefault(require("./Client/setup.cjs"));
+exports.djsClient = setup_js_1.default;
+exports.default = setup_js_1.default;
