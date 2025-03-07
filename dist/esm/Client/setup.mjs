@@ -1,15 +1,29 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { ActivityType, ChannelType, Client, Collection, Colors, GatewayIntentBits, Partials } from "discord.js";
 function consoleError(err) {
-    const BOX_WIDTH = 53;
+    const MIN_BOX_WIDTH = 53;
     const RED = '\x1b[31m';
     const RESET = '\x1b[0m';
+    let maxLineLength = MIN_BOX_WIDTH;
+    if (err instanceof Error) {
+        maxLineLength = Math.max(maxLineLength, `Name: ${err.name}`.length + 4, `Message: ${err.message}`.length + 4);
+        if (err.stack) {
+            const stackLines = err.stack.split('\n');
+            for (const line of stackLines) {
+                maxLineLength = Math.max(maxLineLength, line.length + 4);
+            }
+        }
+    }
+    else {
+        maxLineLength = Math.max(maxLineLength, String(err).length + 4);
+    }
+    const BOX_WIDTH = maxLineLength;
     const BOX_TOP = '┌' + '─'.repeat(BOX_WIDTH - 2) + '┐';
     const BOX_MIDDLE = '├' + '─'.repeat(BOX_WIDTH - 2) + '┤';
     const BOX_BOTTOM = '└' + '─'.repeat(BOX_WIDTH - 2) + '┘';
-    const TITLE = '│' + ' '.repeat(19) + 'ERROR OCCURRED' + ' '.repeat(19) + '│';
-    const ERROR_LABEL = '│ Error details:' + ' '.repeat(35) + '│';
+    const TITLE = '│' + 'ERROR OCCURRED'.padStart((BOX_WIDTH + 11) / 2).padEnd(BOX_WIDTH - 2) + '│';
+    const ERROR_LABEL = '│ Error details:' + ' '.repeat(BOX_WIDTH - 17) + '│';
     console.log(RED + '%s' + RESET, BOX_TOP);
     console.log(RED + '%s' + RESET, TITLE);
     console.log(RED + '%s' + RESET, BOX_MIDDLE);
@@ -29,13 +43,13 @@ function consoleError(err) {
     }
     console.log(RED + '%s' + RESET, BOX_BOTTOM);
 }
-export class djsClient {
+class djsClient {
     client;
     buttonDirectoryName = 'buttons';
     slashCommandDirectoryName = 'slash_commands';
     messageCommandDirectoryName = 'messages';
-    token = '';
     allowedGuilds = new Set([]);
+    token = '';
     addAllowedGuilds(guildId) {
         this.allowedGuilds.add(guildId);
         return this.allowedGuilds;
@@ -69,7 +83,61 @@ export class djsClient {
         await this.client.login(this.token);
     }
     ;
-    constructor({ token, buttonOn, slashCommandsOn, messageCommandsOn, slashCommandDir, ButtonCommandDir, messageCommandDir, status, activityName, activityType, restTimeout, sharding, intents, partials, prefex, allowBots, allowDM, isPrivateBot, }) {
+    ready() {
+        if (this.client.isReady()) {
+            return true;
+        }
+        ;
+        return new Promise(resolve => {
+            this.client.on('ready', () => {
+                resolve(true);
+            });
+        });
+    }
+    /**
+     * @param {Object} options - The configuration options for the client
+     * @param {string} options.token - The Discord bot token
+     * @param {boolean} [options.buttonOn=false] - Whether to enable button commands
+     * @param {boolean} [options.slashCommandsOn=false] - Whether to enable slash commands
+     * @param {boolean} [options.messageCommandsOn=false] - Whether to enable message commands
+     * @param {string} [options.slashCommandDir] - Directory for slash commands
+     * @param {string} [options.ButtonCommandDir] - Directory for button commands
+     * @param {string} [options.messageCommandDir] - Directory for message commands
+     * @param {('online'|'idle'|'dnd'|'invisible')} [options.status='online'] - Bot status
+     * @param {string} [options.activityName] - Activity name for bot status
+     * @param {string} [options.activityType='Playing'] - Activity type for bot status
+     * @param {number} [options.restTimeout=25000] - REST API timeout
+     * @param {(number|'auto'|readonly number[])} [options.sharding='auto'] - Sharding configuration
+     * @param {Array} [options.intents] - Gateway intents
+     * @param {Array} [options.partials] - Partial structures
+     * @param {string} [options.prefex] - deprecated Use 'prefix' instead
+     * @param {string} [options.prefix=''] - Command prefix
+     * @param {boolean} [options.allowBots=false] - Allow bot interactions
+     * @param {boolean} [options.allowDM=true] - Allow DM interactions
+     * @param {boolean} [options.isPrivateBot=false] - Private bot mode
+     */
+    constructor({ token, buttonOn = false, slashCommandsOn = false, messageCommandsOn = false, slashCommandDir, ButtonCommandDir, messageCommandDir, consoleConfig = {
+        error: true,
+        warn: true,
+        info: true,
+        debug: true,
+        trace: true,
+        log: true
+    }, status = 'online', activityName, activityType = 'Playing', restTimeout = 25000, sharding = 'auto', intents, partials, prefex, prefix = '', allowBots = false, allowDM = true, isPrivateBot = false, allowedGuilds, preCommandHook = {
+        button: (buttonInteraction, callback) => {
+            callback(buttonInteraction);
+        },
+        message: (message, callback) => {
+            const args = message.content.split(' ');
+            callback(message, args);
+        },
+        ready: () => {
+            console.log('Bot is ready');
+        },
+        slashCommand: (command, callback) => {
+            callback(command);
+        }
+    } }) {
         const selectedIntents = intents
             ? intents.map(intent => GatewayIntentBits[intent])
             : Object.values(GatewayIntentBits).filter((x) => typeof x === 'number');
@@ -77,6 +145,25 @@ export class djsClient {
             ? partials.map(partial => Partials[partial])
             : Object.keys(Partials).map(key => Partials[key]);
         const fixedActivityType = ActivityType[activityType || 'Watching'];
+        const console = {
+            log: consoleConfig.log ? global.console.log : () => { },
+            warn: consoleConfig.warn ? global.console.warn : () => { },
+            error: consoleConfig.error ? global.console.error : () => { },
+            info: consoleConfig.info ? global.console.info : () => { },
+            debug: consoleConfig.debug ? global.console.debug : () => { },
+        };
+        if (allowedGuilds) {
+            if (typeof allowedGuilds === 'string') {
+                this.allowedGuilds = new Set([allowedGuilds]);
+            }
+            else if (Array.isArray(allowedGuilds)) {
+                this.allowedGuilds = new Set(allowedGuilds);
+            }
+            else {
+                this.allowedGuilds = new Set();
+            }
+        }
+        ;
         this.client = new Client({
             intents: selectedIntents,
             ...(activityName && {
@@ -90,6 +177,7 @@ export class djsClient {
             shards: sharding || 'auto',
             rest: { timeout: restTimeout || 25000 }
         });
+        this.client.djsClient = this;
         if (typeof token !== "string" || token.length < 59) {
             throw new Error(`Invalid token was provided. Error occurred at:\n${new Error().stack?.split("\n")[2]?.trim() || "Unknown location"}\n
   The error happened because the provided token was not a string or it's not well formatted as a Discord bot token!\n`);
@@ -97,6 +185,11 @@ export class djsClient {
         this.client.buttons = new Collection();
         this.client.slashCommands = new Collection();
         this.client.messageCommands = new Collection();
+        if (prefex) {
+            console.warn(`[djsify] The 'prefex' option is deprecated and will be removed in the next major release. Use 'prefix' instead.`);
+        }
+        ;
+        const Prefix = prefix || prefex || '';
         const commands = new Set([]);
         const currentDirectory = process.cwd();
         const readDirectory = (dir) => fs.existsSync(`${currentDirectory}/${dir}`) ? fs.readdirSync(`${currentDirectory}/${dir}`).filter(f => f.endsWith('.mjs') || f.endsWith('.ts')) : [];
@@ -108,7 +201,7 @@ export class djsClient {
             for (const file of directory) {
                 try {
                     const filePath = path.join(currentDirectory, type, file);
-                    let command = await import(`file:///${filePath}`);
+                    let command = require(filePath);
                     if (typeof command === 'object' && 'default' in command) {
                         command = command.default;
                     }
@@ -136,7 +229,7 @@ export class djsClient {
                         if (key) {
                             addedCommands.push(key);
                             if ('content' in commandModule.data && typeof commandModule.data.content === 'string') {
-                                commandModule.data.content = prefex + commandModule.data.content;
+                                commandModule.data.content = Prefix + commandModule.data.content;
                             }
                             collection.set(key, commandModule);
                             if (onLoad)
@@ -163,7 +256,7 @@ export class djsClient {
                 const command = this.client?.slashCommands?.get(i.commandName);
                 if (!command)
                     return;
-                if (isPrivateBot && (!i.guild || !this.allowedGuilds.has(i?.guildId))) {
+                if (isPrivateBot && (!i.guild || !this.allowedGuilds.has(i.guildId))) {
                     return i.isRepliable() && i.reply({
                         embeds: [{
                                 title: `** This Server is not allowed to use this bot! **`,
@@ -172,20 +265,29 @@ export class djsClient {
                     });
                 }
                 try {
-                    await command.execute(i);
+                    Object.assign(i.client, { djsClient: this });
+                    Object.assign(i, { client: this.client });
+                    const callback = command.execute;
+                    await preCommandHook?.slashCommand?.(i, callback);
                 }
                 catch (err) {
-                    consoleError(err);
+                    consoleConfig.error && consoleError(err);
                     const errorMessage = {
                         content: `An error occurred while executing the command:`,
                         flags: 64,
                     };
-                    if (i.isRepliable() && !i.replied)
-                        await i.reply(errorMessage);
-                    else if (i.replied || i.deferred)
-                        await i.editReply(errorMessage);
-                    else if ('followUp' in i && !i.deferred)
-                        await i.followUp(errorMessage);
+                    try {
+                        if (i.isRepliable() && !i.replied && !i.deferred) {
+                            await i.reply(errorMessage);
+                        }
+                        else if (i.replied && !i.deferred) {
+                            await i.followUp(errorMessage);
+                        }
+                        else if (i.deferred) {
+                            await i.editReply(errorMessage);
+                        }
+                    }
+                    catch (replyError) { }
                 }
                 return;
             });
@@ -212,9 +314,10 @@ export class djsClient {
                 const customIds = Array.isArray(command.data.customId) ? command.data.customId : [command.data.customId];
                 customIds.forEach(customId => buttonCommands.set(customId, command));
             });
-            this.client.on('interactionCreate', async (i) => {
-                if (!i.isButton())
+            this.client.on('interactionCreate', async (interaction) => {
+                if (!interaction.isButton())
                     return;
+                const i = interaction;
                 if (isPrivateBot && (!i.guild || !this.allowedGuilds.has(i.guildId))) {
                     return i.isRepliable() && i.reply({
                         embeds: [{
@@ -242,21 +345,32 @@ export class djsClient {
                             (command.data.includes && i.customId.includes(command.data.customId)) ||
                             (command.data.endsWith && i.customId.endsWith(command.data.customId)) ||
                             i.customId === command.data.customId;
-                    if (shouldExecute)
-                        await command.execute(i);
+                    if (!shouldExecute)
+                        return;
+                    Object.assign(i, { djsClient: this });
+                    Object.assign(i.client, { djsClient: this });
+                    const callback = command.execute;
+                    await preCommandHook?.button?.(i, callback);
                 }
                 catch (err) {
-                    consoleError(err);
+                    consoleConfig.error && consoleError(err);
                     const errorMessage = {
                         content: `An error occurred while executing the command:`,
                         flags: 64,
                     };
-                    if (!i.replied && i.isRepliable())
-                        await i.reply(errorMessage);
-                    else if (!i.replied && 'followUp' in i)
-                        await i.followUp(errorMessage);
+                    try {
+                        if (i.isRepliable() && !i.replied && !i.deferred) {
+                            await i.reply(errorMessage);
+                        }
+                        else if (i.replied && !i.deferred) {
+                            await i.followUp(errorMessage);
+                        }
+                        else if (i.deferred) {
+                            await i.editReply(errorMessage);
+                        }
+                    }
+                    catch (replyError) { }
                 }
-                ;
                 return;
             });
         }
@@ -281,10 +395,10 @@ export class djsClient {
                     return;
                 if (!allowDM && m.channel.type === ChannelType.DM)
                     return;
-                if (prefex && !m.content.startsWith(prefex))
+                if (Prefix && !m.content.startsWith(Prefix))
                     return;
                 const args = m.content.trim().split(/\s+/);
-                const commandName = args[0].toLowerCase().replace(prefex || '', '');
+                const commandName = args[0].toLowerCase().replace(Prefix || '', '');
                 const command = this.client.messageCommands?.get(commandName);
                 if (!command)
                     return;
@@ -294,7 +408,9 @@ export class djsClient {
                         command.data.includes && contents.some(content => m.content.includes(content)) ||
                         command.data.endsWith && contents.some(content => m.content.endsWith(content)) ||
                         contents.includes(m.content);
-                    if (shouldExecute && Warned.has(m.author.id))
+                    if (!shouldExecute)
+                        return;
+                    if (Warned.has(m.author.id))
                         return;
                     if (isPrivateBot && (!m?.guild || !this.allowedGuilds?.has(m?.guildId))) {
                         Warned.add(m.author.id);
@@ -306,11 +422,13 @@ export class djsClient {
                         });
                     }
                     ;
-                    if (shouldExecute)
-                        await command.execute(m);
+                    Object.assign(m.client, { djsClient: this });
+                    Object.assign(m, { djsClient: this });
+                    const callback = command.execute;
+                    await preCommandHook?.message?.(m, callback);
                 }
                 catch (err) {
-                    consoleError(err);
+                    consoleConfig.error && consoleError(err);
                     await m.reply({
                         content: `An error occurred while executing the command:`,
                     });
@@ -360,3 +478,4 @@ process.on('SIGTERM', () => {
 process.on('exit', (code) => {
     console.log(`Process exited with code: ${code}`);
 });
+export default djsClient;
