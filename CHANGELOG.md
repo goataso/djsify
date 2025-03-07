@@ -1,3 +1,12 @@
+## [1.7.3] - 2024-02-07
+- Improved error handling
+
+## [1.7.2] - 2024-02-07
+- Fixed a problem with Es module loading
+
+## [1.7.1] - 2024-02-07
+- Fixed a bug where bot cannot load .js Commands
+
 ## [1.7.0] - 2024-02-07
 ### Added
 - preCommandHook option
