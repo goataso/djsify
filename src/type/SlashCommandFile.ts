@@ -1,5 +1,5 @@
-import { CommandInteraction } from "discord.js";
 import SlashType from "./SlashType.js";
+import { SlashCommandInteraction } from "./Commands.js";
 
 class SlashCommandFile {
     /**
@@ -7,13 +7,13 @@ class SlashCommandFile {
      * @param {object} data - The command data
      * @param {Function} execute - The execute function
      */
-    constructor(data: SlashType, execute: (interaction: CommandInteraction) => Promise<void> | void) {
+    constructor(data: SlashType, execute: (interaction: SlashCommandInteraction) => Promise<void> | void) {
         this.data = data;
         this.execute = execute;
     }
 
     declare data: SlashType;
-    declare execute: (interaction: CommandInteraction) => Promise<void> | void;
+    declare execute: (interaction: SlashCommandInteraction) => Promise<void> | void;
 };
 
 export { SlashCommandFile };
