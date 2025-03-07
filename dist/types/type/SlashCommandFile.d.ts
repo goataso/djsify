@@ -1,13 +1,13 @@
-import { CommandInteraction } from "discord.js";
-import SlashType from "./SlashType.cjs";
+import SlashType from "./SlashType.js";
+import { SlashCommandInteraction } from "./Commands.js";
 declare class SlashCommandFile {
     /**
      * @readonly
      * @param {object} data - The command data
      * @param {Function} execute - The execute function
      */
-    constructor(data: SlashType, execute: (interaction: CommandInteraction) => Promise<void> | void);
+    constructor(data: SlashType, execute: (interaction: SlashCommandInteraction) => Promise<void> | void);
     data: SlashType;
-    execute: (interaction: CommandInteraction) => Promise<void> | void;
+    execute: (interaction: SlashCommandInteraction) => Promise<void> | void;
 }
 export { SlashCommandFile };
