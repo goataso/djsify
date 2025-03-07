@@ -12,11 +12,11 @@ const path_1 = __importDefault(require("path"));
 const program = new commander_1.Command();
 program
     .name("DJSify")
-    .description("CLI to build discord.js commands")
+    .description("CLI to build Discord.cjs commands")
     .version("1.0.0");
 program
     .command("--v")
-    .description("Display discord.js version")
+    .description("Display Discord.cjs version")
     .action(() => {
     console.log(`DJSify version: ${version}`);
 });
