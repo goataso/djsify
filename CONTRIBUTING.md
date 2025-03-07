@@ -31,7 +31,7 @@ If you find a bug or have a suggestion for improving djsify, please open an issu
 2. Clone your fork to your local machine
 3. Create a new branch for your changes:
    ```bash
-   git checkout -b goatas/djsify
+   git checkout -b goataso/djsify
    ```
 4. Make your changes and commit them with clear, descriptive commit messages
 5. Push your branch to your fork on GitHub
