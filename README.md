@@ -1,32 +1,31 @@
 # 🎮 djsify - The Ultimate AI-Powered Discord Bot Framework
 
-![Version](https:
-![License](https:
-![Discord.js](https:
-![TypeScript](https:
+![Version](https://img.shields.io/npm/v/djsify)
+![License](https://img.shields.io/npm/l/djsify)
+![Discord.js](https://img.shields.io/badge/discord.js-v14-blue)
+![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)
 
 djsify makes it super easy to create Discord bots. It's built on Discord.js and adds AI features to make your bot smarter. Whether you're just starting out or you've been coding for a while, djsify helps you make awesome Discord bots without all the complicated stuff.
-
-## 📋 What's Inside
-
-- [🌟 Main Features](#-key-features)
-- [📥 How to Install](#-installation)
-- [🚀 Getting Started](#-quick-start)
-- [📊 Main Parts](#-core-classes)
-  - [Bot Client](#djsclient-class)
-  - [AI Features](#ai-class)
-  - [Command Types](#command-classes)
-- [💬 Text Commands](#-message-commands)
-- [⚡ Slash Commands](#-slash-commands)
-- [🔘 Button Commands](#-button-commands)
-- [🧠 AI Features](#-ai-integration)
-- [🎨 Colors](#-styling-with-colors)
-- [⚙️ Extra Settings](#️-advanced-configuration)
-- [🌐 Private Mode](#-private-bot-mode)
-- [📜 TypeScript](#-typescript-support)
-- [📚 Examples](#-examples)
-- [🤝 Help Out](#-contributing)
-- [📄 License](#-license)
+  ## 📋 Table of Contents
+  - [🌟 Main Features](#-main-features)
+  - [📥 Installation](#-installation)
+  - [🚀 Quick Start](#-quick-start)
+  - [📊 Core Classes](#-core-classes)
+    - [Bot Client](#djsclient-class)
+    - [AI Features](#ai-class)
+    - [Command Handlers](#command-classes)
+  - [💬 Message Commands](#-message-commands)
+  - [⚡ Slash Commands](#-slash-commands)
+  - [🔘 Button Commands](#-button-commands)
+  - [🔄 Pre-command Hooks](#-pre-Command-Hooks)
+  - [🧠 AI Integration](#-ai-integration)
+  - [🎨 Styling & Colors](#-styling-with-colors)
+  - [⚙️ Configuration](#️-advanced-configuration)
+  - [🌐 Private Bot Mode](#-private-bot-mode)
+  - [📜 TypeScript Support](#-typescript-support)
+  - [📚 Code Examples](#-examples)
+  - [🤝 Contributing](#-contributing)
+  - [📄 License](#-license)
 
 ## 🌟 Main Features
 
@@ -89,7 +88,9 @@ const { client } = new djsClient({
   messageCommandsOn?: boolean, 
   buttonCommandDir?: string,   
   slashCommandDir?: string,    
-  messageCommandDir?: string,  
+  messageCommandDir?: string,
+  isPrivateBot?: boolean,
+  allowedGuilds: string | string[] | null // will only be working if isPrivateBot is true
 });
 ```
 
@@ -249,6 +250,10 @@ const Command = {
   execute: async (interaction) => {
     const latency = interaction.client.ws.ping;
     await interaction.reply(`Pong! Latency: ${latency}ms`);
+
+    // you can reach also djsClient instance by
+    interaction.djsClient
+    // which allows you to change settings and using functionality without reloading
   }
 };
 
@@ -347,6 +352,37 @@ const Command = {
 
 export default Command;
 ```
+## 🔄 Pre-command Hooks
+
+The preCommandHook option allows you to execute functions before commands are executed. You can use callbacks to pass interaction objects and parameters to commands as needed.
+
+```javascript
+import { djsClient } from "djsify";
+
+const client = new djsClient({
+    token: "YOUR_BOT_TOKEN",
+    preCommandHook: {
+      button: (buttonInteraction, callback) => {
+        console.log(`Button interaction received: ${buttonInteraction.customId}`);
+        callback(buttonInteraction);
+      },
+      message: (message, callback) => {
+        const args = message.content.trim().split(/\s+/);
+        console.log(`Message command received: ${args[0]}`);
+        callback(message, args);
+      },
+      ready: () => {
+        console.log('Bot is online and ready!');
+      },
+      slashCommand: (interaction, callback) => {
+        console.log(`Slash command received: ${interaction.commandName}`); 
+        callback(interaction);
+      }
+    }
+});
+```
+
+## 
 ## 🧠 AI Integration
 
 Use AI to make your bot smarter with Groq integration.
@@ -545,11 +581,40 @@ Make your bot exclusive to specific servers:
 ```javascript
 
 client.addAllowedGuilds([
-  "123456789012345678", 
-  "876543210987654321"  
+  "123456789012345678",  // server ID's 
+  "876543210987654321"  // As an array
 ]);
-
+/**
+ * @type {string[]}
+ */
 const allowedGuilds = client.getAllowedGuilds();
+```
+
+can we add a guildId in runtime ?
+** yes ! **
+```typescript
+import { OptionType } from 'djsify';
+const Command = {
+  data: {
+    name: 'add-guild',
+    description: 'to add a guildId to the allowedGuilds array in runtime',
+    options: [
+      {
+        name: 'guildId',
+        description: 'The guildId to add',
+        type: OptionType.STRING,
+        required: true
+      }
+    ]
+  },
+  async execute(interaction: CommandInteraction): Promise<void> {
+    const guildId = interaction.options.getString('guildId');
+    if (interaction.djsClient) {
+      interaction.djsClient.addAllowedGuilds(guildId); // function supports array and string
+    };
+    await interaction.reply({ content: `Guild ID ${guildId} added to the allowedGuilds array.`, flags: 64 });
+  }
+}
 ```
 
 ## 📜 TypeScript Support
@@ -578,7 +643,7 @@ const Command = {
     name: "ping",
     description: "Pong!"
   },
-  async (interaction: CommandInteraction): Promise<void> => {
+  async execute(interaction: CommandInteraction): Promise<void> {
     await interaction.reply("Pong!");
   }
 };
@@ -687,5 +752,13 @@ We welcome contributions to the djsify project! See [CONTRIBUTING.md](./CONTRIBU
 djsify is licensed under the MIT License. See the [LICENSE](./LICENSE.md) file for details.
 
 ---
+
+## Changelog
+v 1.7.0
+1- Added onEvent options
+2- Added better types and flexibility
+3- improved perforamance
+
+for more information please see [CHANGELOG](./CHANGELOG.md)
 
 Built with ❤️ for Discord bot developers everywhere. Happy coding!
