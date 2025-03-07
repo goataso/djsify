@@ -1,5 +1,4 @@
-import { ButtonInteraction } from "discord.js";
-
+import { ButtoncommandInteraction } from "./Commands.js";
 class ButtonCommandFile {
     /**
      * @readonly
@@ -11,7 +10,7 @@ class ButtonCommandFile {
         startsWith: boolean;
         includes: boolean;
         endsWith: boolean;
-    }, execute: (interaction: ButtonInteraction) => Promise<void> | void) {
+    }, execute: (interaction: ButtoncommandInteraction, ...others: any[]) => Promise<void> | void) {
         this.data = data;
         this.execute = execute;
     }
@@ -22,7 +21,7 @@ class ButtonCommandFile {
         includes: boolean;
         endsWith: boolean;
     };
-    declare execute: (interaction: ButtonInteraction) => Promise<void> | void;
+    declare execute: (interaction: ButtoncommandInteraction) => Promise<void> | void;
 };
 
 export { ButtonCommandFile };
