@@ -3,18 +3,32 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
+const node_fs_1 = __importDefault(require("node:fs"));
+const node_path_1 = __importDefault(require("node:path"));
 const discord_js_1 = require("discord.js");
 function consoleError(err) {
-    const BOX_WIDTH = 53;
+    const MIN_BOX_WIDTH = 53;
     const RED = '\x1b[31m';
     const RESET = '\x1b[0m';
+    let maxLineLength = MIN_BOX_WIDTH;
+    if (err instanceof Error) {
+        maxLineLength = Math.max(maxLineLength, `Name: ${err.name}`.length + 4, `Message: ${err.message}`.length + 4);
+        if (err.stack) {
+            const stackLines = err.stack.split('\n');
+            for (const line of stackLines) {
+                maxLineLength = Math.max(maxLineLength, line.length + 4);
+            }
+        }
+    }
+    else {
+        maxLineLength = Math.max(maxLineLength, String(err).length + 4);
+    }
+    const BOX_WIDTH = maxLineLength;
     const BOX_TOP = '┌' + '─'.repeat(BOX_WIDTH - 2) + '┐';
     const BOX_MIDDLE = '├' + '─'.repeat(BOX_WIDTH - 2) + '┤';
     const BOX_BOTTOM = '└' + '─'.repeat(BOX_WIDTH - 2) + '┘';
-    const TITLE = '│' + ' '.repeat(19) + 'ERROR OCCURRED' + ' '.repeat(19) + '│';
-    const ERROR_LABEL = '│ Error details:' + ' '.repeat(35) + '│';
+    const TITLE = '│' + 'ERROR OCCURRED'.padStart((BOX_WIDTH + 11) / 2).padEnd(BOX_WIDTH - 2) + '│';
+    const ERROR_LABEL = '│ Error details:' + ' '.repeat(BOX_WIDTH - 17) + '│';
     console.log(RED + '%s' + RESET, BOX_TOP);
     console.log(RED + '%s' + RESET, TITLE);
     console.log(RED + '%s' + RESET, BOX_MIDDLE);
@@ -107,7 +121,28 @@ class djsClient {
      * @param {boolean} [options.allowDM=true] - Allow DM interactions
      * @param {boolean} [options.isPrivateBot=false] - Private bot mode
      */
-    constructor({ token, buttonOn = false, slashCommandsOn = false, messageCommandsOn = false, slashCommandDir, ButtonCommandDir, messageCommandDir, status = 'online', activityName, activityType = 'Playing', restTimeout = 25000, sharding = 'auto', intents, partials, prefex, prefix = '', allowBots = false, allowDM = true, isPrivateBot = false, }) {
+    constructor({ token, buttonOn = false, slashCommandsOn = false, messageCommandsOn = false, slashCommandDir, ButtonCommandDir, messageCommandDir, consoleConfig = {
+        error: true,
+        warn: true,
+        info: true,
+        debug: true,
+        trace: true,
+        log: true
+    }, status = 'online', activityName, activityType = 'Playing', restTimeout = 25000, sharding = 'auto', intents, partials, prefex, prefix = '', allowBots = false, allowDM = true, isPrivateBot = false, allowedGuilds, preCommandHook = {
+        button: (buttonInteraction, callback) => {
+            callback(buttonInteraction);
+        },
+        message: (message, callback) => {
+            const args = message.content.split(' ');
+            callback(message, args);
+        },
+        ready: () => {
+            console.log('Bot is ready');
+        },
+        slashCommand: (command, callback) => {
+            callback(command);
+        }
+    } }) {
         const selectedIntents = intents
             ? intents.map(intent => discord_js_1.GatewayIntentBits[intent])
             : Object.values(discord_js_1.GatewayIntentBits).filter((x) => typeof x === 'number');
@@ -115,6 +150,25 @@ class djsClient {
             ? partials.map(partial => discord_js_1.Partials[partial])
             : Object.keys(discord_js_1.Partials).map(key => discord_js_1.Partials[key]);
         const fixedActivityType = discord_js_1.ActivityType[activityType || 'Watching'];
+        const console = {
+            log: consoleConfig.log ? global.console.log : () => { },
+            warn: consoleConfig.warn ? global.console.warn : () => { },
+            error: consoleConfig.error ? global.console.error : () => { },
+            info: consoleConfig.info ? global.console.info : () => { },
+            debug: consoleConfig.debug ? global.console.debug : () => { },
+        };
+        if (allowedGuilds) {
+            if (typeof allowedGuilds === 'string') {
+                this.allowedGuilds = new Set([allowedGuilds]);
+            }
+            else if (Array.isArray(allowedGuilds)) {
+                this.allowedGuilds = new Set(allowedGuilds);
+            }
+            else {
+                this.allowedGuilds = new Set();
+            }
+        }
+        ;
         this.client = new discord_js_1.Client({
             intents: selectedIntents,
             ...(activityName && {
@@ -143,7 +197,7 @@ class djsClient {
         const Prefix = prefix || prefex || '';
         const commands = new Set([]);
         const currentDirectory = process.cwd();
-        const readDirectory = (dir) => fs_1.default.existsSync(`${currentDirectory}/${dir}`) ? fs_1.default.readdirSync(`${currentDirectory}/${dir}`).filter(f => f.endsWith('.cjs') || f.endsWith('.ts')) : [];
+        const readDirectory = (dir) => node_fs_1.default.existsSync(`${currentDirectory}/${dir}`) ? node_fs_1.default.readdirSync(`${currentDirectory}/${dir}`).filter(f => f.endsWith('.cjs') || f.endsWith('.ts')) : [];
         const buttonDirectory = readDirectory(ButtonCommandDir || this.buttonDirectoryName);
         const slashCommandDirectory = readDirectory(slashCommandDir || this.slashCommandDirectoryName);
         const messageCommandDirectory = readDirectory(messageCommandDir || this.messageCommandDirectoryName);
@@ -151,7 +205,7 @@ class djsClient {
             const addedCommands = [];
             for (const file of directory) {
                 try {
-                    const filePath = path_1.default.join(currentDirectory, type, file);
+                    const filePath = node_path_1.default.join(currentDirectory, type, file);
                     let command = require(filePath);
                     if (typeof command === 'object' && 'default' in command) {
                         command = command.default;
@@ -217,20 +271,28 @@ class djsClient {
                 }
                 try {
                     Object.assign(i.client, { djsClient: this });
-                    await command.execute(Object.assign(i, { djsClient: this }));
+                    Object.assign(i, { client: this.client });
+                    const callback = command.execute;
+                    await preCommandHook?.slashCommand?.(i, callback);
                 }
                 catch (err) {
-                    consoleError(err);
+                    consoleConfig.error && consoleError(err);
                     const errorMessage = {
                         content: `An error occurred while executing the command:`,
                         flags: 64,
                     };
-                    if (i.isRepliable() && !i.replied)
-                        await i.reply(errorMessage);
-                    else if (i.replied || i.deferred)
-                        await i.editReply(errorMessage);
-                    else if ('followUp' in i && !i.deferred)
-                        await i.followUp(errorMessage);
+                    try {
+                        if (i.isRepliable() && !i.replied && !i.deferred) {
+                            await i.reply(errorMessage);
+                        }
+                        else if (i.replied && !i.deferred) {
+                            await i.followUp(errorMessage);
+                        }
+                        else if (i.deferred) {
+                            await i.editReply(errorMessage);
+                        }
+                    }
+                    catch (replyError) { }
                 }
                 return;
             });
@@ -288,23 +350,32 @@ class djsClient {
                             (command.data.includes && i.customId.includes(command.data.customId)) ||
                             (command.data.endsWith && i.customId.endsWith(command.data.customId)) ||
                             i.customId === command.data.customId;
+                    if (!shouldExecute)
+                        return;
                     Object.assign(i, { djsClient: this });
                     Object.assign(i.client, { djsClient: this });
-                    if (shouldExecute)
-                        await command.execute(i);
+                    const callback = command.execute;
+                    await preCommandHook?.button?.(i, callback);
                 }
                 catch (err) {
-                    consoleError(err);
+                    consoleConfig.error && consoleError(err);
                     const errorMessage = {
                         content: `An error occurred while executing the command:`,
                         flags: 64,
                     };
-                    if (!i.replied && i.isRepliable())
-                        await i.reply(errorMessage);
-                    else if (!i.replied && 'followUp' in i)
-                        await i.followUp(errorMessage);
+                    try {
+                        if (i.isRepliable() && !i.replied && !i.deferred) {
+                            await i.reply(errorMessage);
+                        }
+                        else if (i.replied && !i.deferred) {
+                            await i.followUp(errorMessage);
+                        }
+                        else if (i.deferred) {
+                            await i.editReply(errorMessage);
+                        }
+                    }
+                    catch (replyError) { }
                 }
-                ;
                 return;
             });
         }
@@ -342,7 +413,9 @@ class djsClient {
                         command.data.includes && contents.some(content => m.content.includes(content)) ||
                         command.data.endsWith && contents.some(content => m.content.endsWith(content)) ||
                         contents.includes(m.content);
-                    if (shouldExecute && Warned.has(m.author.id))
+                    if (!shouldExecute)
+                        return;
+                    if (Warned.has(m.author.id))
                         return;
                     if (isPrivateBot && (!m?.guild || !this.allowedGuilds?.has(m?.guildId))) {
                         Warned.add(m.author.id);
@@ -355,11 +428,12 @@ class djsClient {
                     }
                     ;
                     Object.assign(m.client, { djsClient: this });
-                    if (shouldExecute)
-                        await command.execute(Object.assign(m, { djsClient: this }));
+                    Object.assign(m, { djsClient: this });
+                    const callback = command.execute;
+                    await preCommandHook?.message?.(m, callback);
                 }
                 catch (err) {
-                    consoleError(err);
+                    consoleConfig.error && consoleError(err);
                     await m.reply({
                         content: `An error occurred while executing the command:`,
                     });
