@@ -184,7 +184,8 @@ class djsClient {
         });
         this.client.djsClient = this;
         if (typeof token !== "string" || token.length < 59) {
-            throw new Error(`Invalid token was provided. Error occurred at:\n${new Error().stack?.split("\n")[2]?.trim() || "Unknown location"}\n
+            throw new Error(`Invalid token was been provided or mismatch intents. Error occurred at: ${new Error().stack?.split("\n")[2]?.trim() || "Unknown location"}\n
+                }\n
   The error happened because the provided token was not a string or it's not well formatted as a Discord bot token!\n`);
         }
         this.client.buttons = new discord_js_1.Collection();
@@ -197,7 +198,7 @@ class djsClient {
         const Prefix = prefix || prefex || '';
         const commands = new Set([]);
         const currentDirectory = process.cwd();
-        const readDirectory = (dir) => node_fs_1.default.existsSync(`${currentDirectory}/${dir}`) ? node_fs_1.default.readdirSync(`${currentDirectory}/${dir}`).filter(f => f.endsWith('.cjs') || f.endsWith('.ts')) : [];
+        const readDirectory = (dir) => node_fs_1.default.existsSync(`${currentDirectory}/${dir}`) ? node_fs_1.default.readdirSync(`${currentDirectory}/${dir}`).filter(f => f.endsWith('.cjs') || f.endsWith('.js') || f.endsWith('.ts')) : [];
         const buttonDirectory = readDirectory(ButtonCommandDir || this.buttonDirectoryName);
         const slashCommandDirectory = readDirectory(slashCommandDir || this.slashCommandDirectoryName);
         const messageCommandDirectory = readDirectory(messageCommandDir || this.messageCommandDirectoryName);
@@ -271,7 +272,7 @@ class djsClient {
                 }
                 try {
                     Object.assign(i.client, { djsClient: this });
-                    Object.assign(i, { client: this.client });
+                    Object.assign(i, { djsClient: this });
                     const callback = command.execute;
                     await preCommandHook?.slashCommand?.(i, callback);
                 }
@@ -292,7 +293,7 @@ class djsClient {
                             await i.editReply(errorMessage);
                         }
                     }
-                    catch (replyError) { }
+                    catch { /* Empty */ }
                 }
                 return;
             });
@@ -374,7 +375,7 @@ class djsClient {
                             await i.editReply(errorMessage);
                         }
                     }
-                    catch (replyError) { }
+                    catch { /* Empty */ }
                 }
                 return;
             });
@@ -455,7 +456,7 @@ class djsClient {
                 this.token = token;
             });
         }
-        catch (err) {
+        catch {
             throw new Error(`Invalid token was been provided at Error occurred at: ${new Error().stack?.split("\n")[2]?.trim() || "Unknown location"}\n
               the error happened because the provided token is not valid !\n${new Error().stack?.split("\n")[2]}`);
         }
