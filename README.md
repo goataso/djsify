@@ -757,10 +757,8 @@ djsify is licensed under the MIT License. See the [LICENSE](./LICENSE.md) file f
 ---
 
 ## Changelog
-v 1.7.0
-1- Added onEvent options
-2- Added better types and flexibility
-3- improved perforamance
+## [1.7.1] - 2024-02-07
+- Fixed a bug where bot cannot load .js Commands
 
 for more information please see [CHANGELOG](./CHANGELOG.md)
 
