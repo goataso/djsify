@@ -7,11 +7,11 @@ import path from "path";
 const program = new Command();
 program
     .name("DJSify")
-    .description("CLI to build discord.js commands")
+    .description("CLI to build Discord.mjs commands")
     .version("1.0.0");
 program
     .command("--v")
-    .description("Display discord.js version")
+    .description("Display Discord.mjs version")
     .action(() => {
     console.log(`DJSify version: ${version}`);
 });
