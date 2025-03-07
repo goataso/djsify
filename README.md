@@ -539,9 +539,12 @@ const allColors = {
 
 const { client } = new djsClient({
   token: "YOUR_DISCORD_BOT_TOKEN",
-  buttonCommandDir: "./src/interactions/buttons",
-  slashCommandDir: "./src/interactions/commands",
-  messageCommandDir: "./src/interactions/messages",
+  buttonCommandDir: "./buttons",
+  slashCommandDir: "./commands",
+  messageCommandDir: "./messages",
+  buttonOn: true, // must be true to use custom directories
+  slashCommandsOn: true, // must be true to use custom directories
+  messageCommandsOn: true, // must be true to use custom directories
 });
 
 client.setButtonCommandsDir("./src/buttons");
