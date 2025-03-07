@@ -1,6 +1,6 @@
 {
   "name": "djsify",
-  "version": "1.7.0",
+  "version": "1.7.3",
   "repository": {
     "directory": ".",
     "type": "git",
@@ -54,7 +54,7 @@
     "typescript"
   ],
   "scripts": {
-    "build": "rimraf dist && tsc --project tsconfig.cjs.json && tsc",
+    "build": "rimraf dist && tsc --project tsconfig.cjs.json & tsc && node ../dist/runner.cjs",
     "build:cjs": "tsc --project tsconfig.cjs.json",
     "build:esm": "tsc"
   },
