@@ -258,7 +258,7 @@ class djsClient {
         this.client.djsClient = this;
 
         if (typeof token !== "string" || token.length < 59) {
-            throw new Error(`Invalid token was provided. Error occurred at:\n${new Error().stack?.split("\n")[2]?.trim() || "Unknown location"
+            throw new Error(`Invalid token was been provided or mismatch intents. Error occurred at: ${new Error().stack?.split("\n")[2]?.trim() || "Unknown location"}\n
                 }\n
   The error happened because the provided token was not a string or it's not well formatted as a Discord bot token!\n`);
         }
@@ -353,7 +353,7 @@ class djsClient {
 
                 try {
                     Object.assign(i.client, { djsClient: this });
-                    Object.assign(i, { client: this.client });
+                    Object.assign(i, { djsClient: this });
                     const callback = command.execute;
                     await preCommandHook?.slashCommand?.(i, callback);
                 } catch (err) {
@@ -370,7 +370,7 @@ class djsClient {
                         } else if (i.deferred) {
                             await i.editReply(errorMessage);
                         }
-                    } catch (replyError) { }
+                    } catch { /* Empty */ }
                 }
                 return;
             });
@@ -453,7 +453,7 @@ class djsClient {
                         } else if (i.deferred) {
                             await i.editReply(errorMessage);
                         }
-                    } catch (replyError) {}
+                    } catch { /* Empty */ }
                 }
 
                 return;
@@ -534,7 +534,7 @@ class djsClient {
             this.client.login(token).then(() => {
                 this.token = token;
             });
-        } catch (err) {
+        } catch {
             throw new Error(`Invalid token was been provided at Error occurred at: ${new Error().stack?.split("\n")[2]?.trim() || "Unknown location"
                 }\n
               the error happened because the provided token is not valid !\n${new Error().stack?.split("\n")[2]
