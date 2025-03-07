@@ -1,4 +1,4 @@
-import { Message } from "discord.js";
+import { MessageInteraction } from "./Commands.js";
 
 class MessageCommandFile {
     /**
@@ -11,7 +11,7 @@ class MessageCommandFile {
         startsWith?: boolean;
         includes?: boolean;
         endsWith?: boolean;
-    }, execute: (message: Message) => Promise<void> | void) {
+    }, execute: (message: MessageInteraction, ...args: any[]) => Promise<void> | void) {
         this.data = data;
         this.execute = execute;
     }
@@ -22,7 +22,7 @@ class MessageCommandFile {
         includes?: boolean;
         endsWith?: boolean;
     };
-    declare execute: (message: Message) => Promise<void> | void;
+    declare execute: (message: MessageInteraction, ...args: any[]) => Promise<void> | void;
 };
 
 export { MessageCommandFile };
