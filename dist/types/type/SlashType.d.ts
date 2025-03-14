@@ -1,3 +1,3 @@
-import { RESTPostAPIApplicationGuildCommandsJSONBody } from "discord.js";
-type SlashType = RESTPostAPIApplicationGuildCommandsJSONBody;
+import { RESTPostAPIApplicationGuildCommandsJSONBody, SlashCommandBuilder, SlashCommandOptionsOnlyBuilder } from "discord.js";
+type SlashType = RESTPostAPIApplicationGuildCommandsJSONBody | SlashCommandBuilder | SlashCommandOptionsOnlyBuilder;
 export default SlashType;
