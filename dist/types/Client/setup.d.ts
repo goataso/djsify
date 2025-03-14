@@ -45,6 +45,15 @@ declare class djsClient {
      * @param {boolean} [options.allowBots=false] - Allow bot interactions
      * @param {boolean} [options.allowDM=true] - Allow DM interactions
      * @param {boolean} [options.isPrivateBot=false] - Private bot mode
+     * @param {Array} [options.allowedGuilds] - Allowed guild IDs
+     * @param {Object} [options.consoleConfig] - Console configuration
+     * @param {boolean} [options.consoleConfig.error=true] - Enable error logging
+     * @param {boolean} [options.consoleConfig.warn=true] - Enable warning logging
+     * @param {boolean} [options.consoleConfig.info=true] - Enable info logging
+     * @param {boolean} [options.consoleConfig.debug=true] - Enable debug logging
+     * @param {boolean} [options.consoleConfig.trace=true] - Enable trace logging
+     * @param {boolean} [options.consoleConfig.log=true] - Enable log logging
+     * @param {Object} [options.preCommandHook] - Pre-command hook
      */
     constructor({ token, buttonOn, slashCommandsOn, messageCommandsOn, slashCommandDir, ButtonCommandDir, messageCommandDir, consoleConfig, status, activityName, activityType, restTimeout, sharding, intents, partials, prefex, prefix, allowBots, allowDM, isPrivateBot, allowedGuilds, preCommandHook }: {
         token: string;
@@ -74,8 +83,8 @@ declare class djsClient {
         allowBots?: boolean;
         allowDM?: boolean;
         isPrivateBot?: boolean;
-        allowedGuilds: string[] | string | null;
-        preCommandHook: {
+        allowedGuilds?: string[] | string | null;
+        preCommandHook?: {
             ready?: () => void;
             message?: (message: MessageInteraction, callBack: (...args: [MessageInteraction, ...any]) => Promise<void> | void) => Promise<void> | void;
             slashCommand?: (command: SlashCommandInteraction, callBack: (...args: [SlashCommandInteraction, ...any]) => Promise<void> | void) => Promise<void> | void;
