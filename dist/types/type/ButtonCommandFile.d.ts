@@ -7,15 +7,15 @@ declare class ButtonCommandFile {
      */
     constructor(data: {
         customId: string;
-        startsWith: boolean;
-        includes: boolean;
-        endsWith: boolean;
+        startsWith?: boolean;
+        includes?: boolean;
+        endsWith?: boolean;
     }, execute: (interaction: ButtoncommandInteraction, ...others: any[]) => Promise<void> | void);
     data: {
         customId: string;
-        startsWith: boolean;
-        includes: boolean;
-        endsWith: boolean;
+        startsWith?: boolean;
+        includes?: boolean;
+        endsWith?: boolean;
     };
     execute: (interaction: ButtoncommandInteraction) => Promise<void> | void;
 }
