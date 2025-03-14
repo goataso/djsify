@@ -1,6 +1,6 @@
 {
   "name": "djsify",
-  "version": "1.7.3",
+  "version": "1.7.5",
   "repository": {
     "directory": ".",
     "type": "git",
@@ -12,7 +12,7 @@
     "url": "https://github.com/goataso"
   },
   "license": "MIT",
-  "description": "A Discord bot framework for Discord.js",
+  "description": "A powerful and flexible Discord bot framework for building feature-rich Discord bots with ease. Supports message commands, slash commands, and button interactions.",
   "main": "dist/cjs/index.cjs",
   "module": "dist/esm/index.mjs",
   "types": "dist/types/index.d.ts",
@@ -31,12 +31,14 @@
   },
   "type": "module",
   "bin": {
-    "djs": "dist/cli.js"
+    "djs": "./dist/cjs/cli.cjs"
   },
   "keywords": [
     "discord",
     "discord.js",
     "discord bot",
+    "discord bot framework",
+    "discord development",
     "djs",
     "ai",
     "artificial intelligence",
@@ -51,7 +53,13 @@
     "automation",
     "open source",
     "javascript",
-    "typescript"
+    "typescript",
+    "bot development",
+    "discord automation",
+    "interactive bot",
+    "command handler",
+    "event handler",
+    "discord integration"
   ],
   "scripts": {
     "build": "rimraf dist && tsc --project tsconfig.cjs.json & tsc && node ../dist/runner.cjs",
@@ -59,15 +67,18 @@
     "build:esm": "tsc"
   },
   "dependencies": {
-    "commander": "^12.1.0",
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
     "discord.js": "^14.18.0",
-    "dotenv": "^16.4.5",
-    "inquirer": "^12.4.1"
+    "dotenv": "^16.4.7",
+    "inquirer": "^12.4.3",
+    "prettier": "^3.5.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
     "@types/inquirer": "^9.0.7",
     "@types/node": "^22.13.8",
+    "@types/pacote": "^11.1.8",
     "eslint": "^9.21.0",
     "globals": "^16.0.0",
     "rimraf": "^5.0.5",
