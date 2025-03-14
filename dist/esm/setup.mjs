@@ -1,62 +1,101 @@
 // src/setup.ts
 import inquirer from "inquirer";
 import fs from "fs";
-const version = "1.0.0";
+import chalk from 'chalk';
+import nodePath from 'node:path';
+import prettier from 'prettier';
 import { Command } from "commander";
-import path from "path";
+import { GetButtonExmaple } from "./cli/buttonExample.mjs";
+import { performance } from "node:perf_hooks";
+import { exec } from "node:child_process";
+const version = "1.0.0";
 const program = new Command();
 program
-    .name("DJSify")
-    .description("CLI to build Discord.mjs commands")
+    .name("djsify")
+    .description("CLI to build djsify commands")
     .version("1.0.0");
 program
     .command("--v")
-    .description("Display Discord.mjs version")
+    .description("Display djsify version")
     .action(() => {
-    console.log(`DJSify version: ${version}`);
+    console.log(chalk.cyan(`djsify version: ${version}`));
+});
+program
+    .command('update')
+    .description('Update djsify')
+    .action(async () => {
+    console.log(chalk.blue(`Updating djsify...`));
+    const install = await installPackage('djsify', 'latest', true);
+    console.log(chalk.hex(`#90EE90`)('✔ ') + chalk.green(`djsify updated successfully to latest version in ${chalk.bold.yellow(install.toFixed(2))} ms`));
 });
 program
     .command("build")
     .description("to Start your bot")
     .action(() => {
     const directory = process.cwd();
-    console.log(`Starting your bot...`);
+    console.log(chalk.blue(`Starting build...`));
     let config;
     try {
         config = JSON.parse(fs.readFileSync(`${directory}/config.djs.json`, 'utf8'));
     }
     catch {
-        return console.log('the workspace doesnt have a build file');
+        return console.log(chalk.red('the workspace doesnt have a build file'));
     }
     const { type } = config;
-    const { exec } = require("child_process");
     if (!type || type.toLowerCase() === 'js') {
-        exec('node .', (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Error executing tsc: ${error.message}`);
-                console.error(`stdout: ${stdout}`);
-                console.error(`stderr: ${stderr}`);
-                return;
+        const child = exec("node .");
+        child.stdout?.on('data', (data) => {
+            process.stdout.write(chalk.gray(data.toString()));
+            if (data.toString().toLowerCase().includes('logged in as')) {
+                console.log(chalk.hex(`#90EE90`)('✔ ') + chalk.green("Bot started successfully."));
             }
-            console.log("Bot started successfully.");
+        });
+        child.stderr?.on('data', (data) => {
+            process.stdout.write(chalk.red(data.toString()));
+        });
+        child.on('error', (error) => {
+            console.error(chalk.red(`Error executing node: ${error.message}`));
+        });
+        child.on('close', (code) => {
+            if (code === 0) {
+                console.log(chalk.hex(`#90EE90`)('✔ ') + chalk.green("Bot started successfully."));
+            }
+            else {
+                console.error(chalk.red(`Process exited with code ${code}`));
+            }
         });
         return;
     }
     exec("npx tsc", (error, stdout, stderr) => {
         if (error) {
-            console.error(`Error executing tsc: ${error.message}`);
-            console.error(`stdout: ${stdout}`);
-            console.error(`stderr: ${stderr}`);
+            console.error(chalk.red(`Error executing tsc: ${error.message}`));
+            console.error(chalk.red(`stdout: ${stdout}`));
+            console.error(chalk.red(`stderr: ${stderr}`));
             return;
         }
-        console.log("TypeScript compilation completed.");
-        console.log(`stdout: ${stdout}`);
-        exec("cd dist && node .", (error) => {
-            if (error) {
-                console.error(`Error executing node: ${error.message}`);
-                return;
+        console.log(chalk.hex(`#90EE90`)('✔ ') + chalk.green("TypeScript compilation completed."));
+        if (stdout)
+            console.log(chalk.gray(`stdout: ${stdout}`));
+        const child = exec("cd dist && node .");
+        child.stdout?.on('data', (data) => {
+            process.stdout.write(chalk.gray(data.toString()));
+            if (data.toString().toLowerCase().includes('logged in as')) {
+                console.log(chalk.hex(`#90EE90`)('✔ ') + chalk.green("Bot started successfully."));
             }
-            console.log("Bot started successfully.");
+        });
+        child.stderr?.on('data', (data) => {
+            process.stdout.write(chalk.red(data.toString()));
+        });
+        child.on('error', (error) => {
+            process.stdout.write(chalk.red(`Error executing node: ${error.message}`));
+        });
+        child.on('close', (code) => {
+            if (code === 0) {
+                console.log(chalk.hex(`#90EE90`)('✔ ') + chalk.green("Bot started successfully."));
+            }
+            else {
+                console.error(chalk.red(`Process exited with code ${code}`));
+            }
         });
     });
 });
@@ -64,36 +103,33 @@ program
     .command("createButton <buttonCustomId>")
     .description("Create a new button")
     .action((buttonCustomId) => {
-    console.log(`Creating button with custom ID: ${buttonCustomId}`);
+    console.log(chalk.blue(`Creating button with custom ID: ${buttonCustomId}`));
     const currentDirectory = process.cwd();
-    const content = `import { ButtonInteraction } from 'discord.js';
-
-export default {
-  data: {
-    customId: "${buttonCustomId}"
-  },
-  async execute(interaction: ButtonInteraction) {
-    // Your code here
-  }
-};`;
+    const content = GetButtonExmaple(buttonCustomId);
     try {
         fs.existsSync(currentDirectory + "/buttons") ||
             fs.mkdirSync(currentDirectory + "/buttons");
-        fs.writeFileSync(path.join(currentDirectory, "buttons", `${buttonCustomId}.ts`), content);
-        console.log(`Done creating button file with ${buttonCustomId} id`);
+        fs.writeFileSync(nodePath.join(currentDirectory, "buttons", `${buttonCustomId}.ts`), content);
+        console.log(chalk.green(`Done creating button file with ${buttonCustomId} id`));
     }
     catch (error) {
-        console.error("Error creating button file:", error);
+        console.error(chalk.red("Error creating button file:"), error);
     }
 });
 program
     .command("createSlash")
     .description("Create a new slash command")
     .action(() => {
-    inquirer.prompt(questionsSlash).then((answers) => {
-        const commandName = answers.commandName;
+    inquirer.prompt(questionsSlash).then(async (answers) => {
+        const commandName = answers.commandName?.replace(/[^a-zA-Z0-9]/g, '');
         const commandDescription = answers.commandDescription;
         const currentDirectory = process.cwd();
+        const exists = fs.existsSync(nodePath.join(currentDirectory, "config.djs.json"));
+        if (!exists) {
+            console.log(chalk.red("This directory does not have a djs config file."));
+            return;
+        }
+        ;
         const file = JSON.parse(fs.readFileSync(currentDirectory + "/config.djs.json", "utf8"));
         const commandType = answers.commandType.toUpperCase();
         let type;
@@ -103,36 +139,49 @@ program
         else {
             type = commandType;
         }
+        ;
+        const isESM = file.module === 'module';
+        const isTS = file.type === 'TS';
         const { type: language } = file;
-        const commandFile = `${language === "TS"
-            ? `import { CommandInteraction } from 'discord.js';`
-            : 'const { CommandInteraction } = require("discord.js");'}
-${language === "TS"
-            ? `import { OptionType , SlashCommandBuilder} from 'DJSify'`
-            : 'const { OptionType, SlashCommandBuilder } = require("DJSify")'}    
-module.exports = {
-  data: new SlashCommandBuilder()
-      .setName('${commandName}')
-      .setDescription('${commandDescription}')
-      ${type !== "none"
-            ? `.addOption({
-        name : "your_option_name",
-        description : "your option description",
-        type : OptionType.${type},
-        required : true
-        })`
+        const importStatement = isESM
+            ? `import { SlashCommandFile } from 'djsify';`
+            : 'const { SlashCommandFile } = require("djsify");';
+        const djsifyImport = isESM
+            ? `import { OptionType, SlashCommand } from 'djsify';\nimport { SlashCommandBuilder } from 'discord.js';`
+            : 'const { OptionType, SlashCommand } = require("djsify");\nconst { SlashCommandBuilder } = require("discord.js");';
+        const commandStructure = `
+        ${importStatement}
+        ${djsifyImport}
+        ${!isTS ? `/**
+ * @type {SlashCommandFile}
+ */` : ""}
+        const ${commandName}${isTS ? ": SlashCommandFile" : ""} = {
+          data: new SlashCommandBuilder()
+            .setName('${commandName}')
+            .setDescription('${commandDescription}')
+            ${type !== "none"
+            ? `.addStringOption(option =>
+                option
+                  .setName("your_option_name")
+                  .setDescription("your option description")
+                  .setRequired(true)
+              )`
             : ""},
-      ${language == "JS"
-            ? '/** @param {import("discord.js").Interaction} interaction */'
-            : ""}
-  async execute(interaction ${language == "TS" ? ": CommandInteraction" : ""}) {
-      // Command execution logic here
-  }
-};
-`;
-        fs.writeFileSync(currentDirectory +
-            `/commands/${commandName}.${language.toLowerCase()}`, commandFile);
-        console.log(`Slash command created successfully: /${commandName}`);
+
+          async execute(interaction) {
+            // Command execution logic here
+          }
+        };
+
+        ${isESM ? 'export default' : 'module.exports ='} ${commandName};
+      `;
+        const location = currentDirectory + `/commands/${commandName}.${language.toLowerCase()}`;
+        const prettified = await prettier.format(commandStructure, {
+            ...prettierConfig,
+            filepath: location
+        });
+        fs.writeFileSync(location, prettified);
+        console.log(chalk.hex(`#90EE90`)('✔ ') + chalk.green(`Slash command created successfully: /${commandName}`));
     });
 });
 const questionsSlash = [
@@ -176,6 +225,12 @@ const questions = [
         choices: ["JS", "TS"],
     },
     {
+        type: "list",
+        name: 'Es Module / CommonJS',
+        message: "Choose your module type",
+        choices: ["module", "CommonJS"],
+    },
+    {
         type: "confirm",
         name: "buttonOn",
         message: "Enable buttons?",
@@ -202,221 +257,147 @@ const questions = [
 program
     .command("setup")
     .description("setup your bot environment")
-    .action(() => {
-    inquirer
-        .prompt(questions)
-        .then(async (answers) => {
-        const typeLanguage = answers["js / ts"];
-        const buttonOn = answers.buttonOn;
-        const slashCommandsOn = answers.slashCommandsOn;
-        const botToken = answers.bot_token;
-        const messageOn = answers.messageOn;
+    .action(async () => {
+    try {
+        const answers = await inquirer.prompt(questions);
+        const { 'js / ts': typeLanguage, 'Es Module / CommonJS': moduleType, buttonOn, slashCommandsOn, botToken, messageOn } = answers;
         const currentDirectory = process.cwd();
-        const data = {
-            type: typeLanguage,
-            buttonOn: true,
-            slashCommandsOn: true,
-            botToken: botToken,
-            features: {
-                advancedMessageHandling: true,
-                customEmbedsSupport: true,
-                interactiveComponents: true,
-                voiceChannelIntegration: true,
-                multiServerSupport: true,
-                databaseIntegration: true,
-                webhookManagement: true,
-                autoModeration: true,
-                customCommandCreation: true,
-                roleManagement: true,
-            },
-            performance: {
-                optimizedCaching: true,
-                asyncProcessing: true,
-                lowLatencyResponses: true,
-            },
-            security: {
-                encryptedDataStorage: true,
-                rateLimiting: true,
-                antiSpamProtection: true,
-            },
-            analytics: {
-                userActivityTracking: true,
-                commandUsageStatistics: true,
-                performanceMetrics: true,
-            },
-            customization: {
-                theming: true,
-                localization: true,
-            },
-            version: "2.0.0",
-            codename: "DJSify",
-        };
-        let code;
-        if (typeLanguage === "JS") {
-            code = `import { djsClient } from 'djsify';
+        const isTS = typeLanguage === "TS";
+        const fileExt = `.${typeLanguage.toLowerCase()}`;
+        const isESM = moduleType === "module";
+        const baseCode = isESM ?
+            `import { djsClient } from 'djsify';
+    const { client } = new djsClient({
+        token: '',
+        buttonOn: true,
+        slashCommandsOn: true,
+        messageCommandsOn : true,
+        ${isTS ? 'ButtonCommandDir' : 'ButtonCommandDir'} : '/buttons', // not required
+        slashCommandDir : '/commands', // not required
+        messageCommandDir : '/messages' // not required
+    });` :
+            `const { djsClient } = require('djsify');
 const { client } = new djsClient({
     token: '',
     buttonOn: true,
     slashCommandsOn: true,
     messageCommandsOn : true,
-    ButtonCommandDir : '/buttons', // not required
+    ${isTS ? 'ButtonCommandDir' : 'ButtonCommandDir'} : '/buttons', // not required
     slashCommandDir : '/commands', // not required
     messageCommandDir : '/messages' // not required
-});
-/* thats all you shouldnt do any thing else editing in the created folders
-${slashCommandsOn ? "/slash_commands" : ""}
-${buttonOn ? "/buttons" : ""}
-${messageOn ? "/messages" : ""}
-*/`;
-        }
-        else if (typeLanguage === "TS") {
-            code = `import { djsClient } from 'DJSify';
-const { client } = new djsClient({
-    token: '',
-    buttonOn: true,
-    slashCommandsOn: true,
-    messageCommandsOn : true,
-    buttonCommandDir : '/buttons', // not required
-    slashCommandDir : '/commands', // not required
-    messageCommandDir : '/messages' // not required
-});
+});`;
+        const code = isTS ? `${baseCode}
 // you can use client in any other interactions or messages
 // for e.g
 client.once('ready', () => {
-  console.log('I Love DJSify');
+  console.log('I Love djsify');
 });
 /* thats all you shouldnt do any thing else editing in the created folders
-${slashCommandsOn ? "/slash_commands" : ""}
-${buttonOn ? "/buttons" : ""}
-${messageOn ? "/messages" : ""}
-        */`;
-            //fs.existsSync(`${process.cwd()}/commands`) || fs.mkdirSync(`${process.cwd()}/commands`)
-            //fs.existsSync(`${process.cwd()}/messages`) || fs.mkdirSync(`${process.cwd()}/messages`)
-            //fs.existsSync(`${process.cwd()}/buttons`) || fs.mkdirSync(`${process.cwd()}/buttons`)
+ ${slashCommandsOn ? "/slash_commands" : ""}
+ ${buttonOn ? "/buttons" : ""}
+ ${messageOn ? "/messages" : ""}
+*/` : `${baseCode}
+/* thats all you shouldnt do any thing else editing in the created folders
+ ${slashCommandsOn ? "/slash_commands" : ""}
+ ${buttonOn ? "/buttons" : ""}
+ ${messageOn ? "/messages" : ""}
+*/`;
+        const dirs = {
+            buttons: buttonOn,
+            commands: slashCommandsOn,
+            messages: messageOn
+        };
+        Object.entries(dirs).forEach(([dir, enabled]) => {
+            if (enabled && !fs.existsSync(`${currentDirectory}/${dir}`)) {
+                fs.mkdirSync(`${currentDirectory}/${dir}`);
+            }
+        });
+        fs.writeFileSync(`${currentDirectory}/config.djs.json`, JSON.stringify(baseConfig(typeLanguage, botToken, isESM ? 'module' : 'commonjs'), null, 4));
+        fs.writeFileSync(`${currentDirectory}/index${fileExt}`, code);
+        const { MessageFileJS, MessageFileTS, buttonFile, buttonFileTS, commandFile, commandFileTS, tsConfig } = await createSampleFiles(isESM, isTS);
+        const sampleFiles = {
+            [`/buttons/djs${fileExt}`]: isTS ? buttonFileTS : buttonFile,
+            [`/commands/ping${fileExt}`]: isTS ? commandFileTS : commandFile,
+            [`/messages/helloWorld${fileExt}`]: isTS ? MessageFileTS : MessageFileJS
+        };
+        Object.entries(sampleFiles).forEach(([path, content]) => {
+            const fullPath = currentDirectory + path;
+            const dir = nodePath.dirname(fullPath);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            fs.writeFileSync(fullPath, content);
+        });
+        if (isTS) {
+            fs.writeFileSync(`${currentDirectory}/tsconfig.json`, tsConfig);
         }
-        else {
-            code = "";
+        if (isESM) {
+            const packageJson = {
+                "type": "module"
+            };
+            fs.writeFileSync(`${currentDirectory}/package.json`, JSON.stringify(packageJson, null, 2));
         }
-        if (buttonOn && !fs.existsSync(`${currentDirectory}/buttons`)) {
-            fs.mkdirSync(currentDirectory + "/buttons");
+        const filesToPrettify = [
+            `${currentDirectory}/index${fileExt}`,
+            ...Object.keys(sampleFiles).map(path => currentDirectory + path)
+        ];
+        for (const file of filesToPrettify) {
+            if (fs.existsSync(file)) {
+                const content = fs.readFileSync(file, 'utf8');
+                const prettified = await prettier.format(content, {
+                    ...prettierConfig,
+                    filepath: file
+                });
+                fs.writeFileSync(file, prettified);
+            }
         }
-        if (slashCommandsOn &&
-            !fs.existsSync(`${currentDirectory}/commands`)) {
-            fs.mkdirSync(currentDirectory + "/commands");
-        }
-        if (messageOn && !fs.existsSync(`${currentDirectory}/messages`)) {
-            fs.mkdirSync(currentDirectory + "/messages");
-        }
-        fs.writeFileSync(currentDirectory + "/config.djs.json", JSON.stringify(data, null, 4));
-        fs.writeFileSync(currentDirectory + `/index.${typeLanguage.toLowerCase()}`, code);
-        const { MessageFileJS, MessageFileTS, buttonFile, buttonFileTS, commandFile, commandFileTS, tsConfig, } = await createSampleFiles();
-        fs.writeFileSync(currentDirectory + `/buttons/djs.${typeLanguage.toLowerCase()}`, typeLanguage.toLowerCase() === "js" ? buttonFile : buttonFileTS);
-        fs.writeFileSync(currentDirectory + `/slash_commands/ping.${typeLanguage.toLowerCase()}`, typeLanguage.toLowerCase() === "js" ? commandFile : commandFileTS);
-        fs.writeFileSync(currentDirectory + `/messages/helloWorld.${typeLanguage.toLowerCase()}`, typeLanguage.toLowerCase() === "js" ? MessageFileJS : MessageFileTS);
-        if (typeLanguage.toLowerCase() === "ts") {
-            fs.writeFileSync(currentDirectory + `/tsconfig.json`, tsConfig);
-        }
-        console.log(`done setuping everything`);
-        console.log(`> you can run this application using djs build`);
-    })
-        .catch((error) => {
+        console.log(chalk.bold.green('✓') + chalk.white.bold(' files Setup completed successfully'));
+        const duration = await installPackage('djsify');
+        process.stdout.clearLine(0);
+        process.stdout.cursorTo(0);
+        process.stdout.write(`${chalk.green('✔')} ${chalk.bold.green('Packages installed successfully')} ${chalk.gray('in')} ${chalk.bold.yellow(duration.toFixed(2))} ${chalk.gray('ms')}`);
+        console.log(`\n${chalk.cyan.bold('🚀 Ready to launch!')} ${chalk.bold.gray('Start your application with:')} ${chalk.blue.bold('djs build')}`);
+    }
+    catch (error) {
         if (error.isTtyError) {
-            console.log("Prompt couldn't be rendered in the current environment");
+            console.log(chalk.red("Prompt couldn't be rendered in the current environment"));
         }
         else if (error.name === "ExitPromptError") {
-            console.log("User exited the prompt");
+            console.log(chalk.yellow("User exited the prompt"));
         }
         else {
-            console.log("An error occurred:", error);
+            console.log(chalk.red("An error occurred:"), error);
         }
-    })
-        .finally(() => {
+    }
+    finally {
         process.exit(0);
-    });
+    }
 });
 program.parse(process.argv);
-process.on("SIGINT", () => {
-    console.log("\nExiting...");
-    process.exit(0);
+program.on('exit', (code) => {
+    if (code === 0) {
+        console.log(chalk.green('✓ Setup completed successfully'));
+        console.log(chalk.cyan('> You can run this application using'), chalk.yellow('djs build'));
+    }
 });
-async function createSampleFiles() {
-    const description = "`The bot ${pingType || 'API'} ping is ${pingType === 'ws' ? interaction.client.ws.ping : apiPing}ms`";
-    const buttonFile = `module.exports = {
-    data : {
-        customId: 'djs-builder'
-    },
-    async execute(interaction) {
-        await interaction.reply('Hello World!');
-    }
-}`;
-    const commandFile = `import { Colors ,SlashCommand  } from 'djsify';
-
-module.exports = {
-    data: new SlashCommand()
-        .setName('ping')
-        .setDescription('Replies with "Pong!"')
-        .addOption({
-            name : 'type',
-            description : 'type',
-            type : 'STRING',
-            required : false,
-            choices : [
-                {
-                    name: 'ws',
-                    value: 'ws'
-                },
-                {
-                    name: 'api',
-                    value: 'api'
-                }
-            ]
-        }),
-    /** @param {import('discord.js').Interaction} interaction */
-    async execute(interaction) {
-        const pingType = interaction.options.get('type')?.value;
-        const date = Date.now();
-        await interaction.deferReply();
-        const date2 = Date.now();
-        const apiPing = date2 - date;
-        const embed = {
-            title: 'Ping',
-            description: ${description},
-            color: Colors.Aqua        };
-        if (interaction.isRepliable()) {
-            await interaction.editReply({ embeds: [embed] });
-        }
-    }
+const handleExit = (signal) => {
+    console.log(chalk.yellow(`\nReceived ${signal}. Gracefully shutting down...`));
+    process.exit(0);
 };
-
-`;
-    const commandFileTS = `const { Colors ,SlashCommand  } = require('djsify');
-module.exports = {
-    data: new SlashCommand()
-        .setName('ping')
-        .setDescription('Replies with "Pong!"')
-        .addOption({
-            name : 'type',
-            description : 'type',
-            type : 'STRING',
-            required : false,
-            choices : [
-                {
-                    name: 'ws',
-                    value: 'ws'
-                },
-                {
-                    name: 'api',
-                    value: 'api'
-                }
-            ]
-        }),
-    /** @param {import('discord.js').Interaction} interaction */
-    async execute(interaction) {
+process.on("unhandledRejection", (err) => {
+    console.log(chalk.red('⛔ User closed process gracefully'), err);
+    process.exit(1);
+});
+process.on("SIGTERM", () => handleExit("SIGTERM"));
+process.on("SIGINT", () => handleExit("SIGINT"));
+async function createSampleFiles(isESM, isTS) {
+    const description = "`The bot ${pingType || 'API'} ping is ${pingType === 'ws' ? interaction.client.ws.ping : apiPing}ms`";
+    const commonCommandLogic = `
         const pingType = interaction.options.get('type')?.value;
-        const date = Date.now();
+        const start = Date.now();
         await interaction.deferReply();
-        const date2 = Date.now();
-        const apiPing = date2 - date;
+        const end = Date.now();
+        const apiPing = end - start;
         const embed = {
             title: 'Ping',
             description: ${description},
@@ -424,84 +405,177 @@ module.exports = {
         };
         if (interaction.isRepliable()) {
             await interaction.editReply({ embeds: [embed] });
-        }
-    }
-};
-
-
-export default command;`;
-    const buttonFileTS = `import { ButtonInteraction } from "discord.js";
-
-export default {
-    data: {
-        customId: 'djs'
-    },
-    async execute(interaction: ButtonInteraction) {
-        await interaction.reply({ content: "Button clicked!" });
-    }
-}`;
-    const MessageFileTS = `import { Message } from "discord.js";
-
-export default {
-    data: {
-        content: 'hi',
-        includes: true,
-        //startsWith: true, other arguments
-        //endsWith: true,  other arguments
-    },
-    async execute(message: Message): Promise<void> {
+        }`;
+    const commandBase = {
+        data: `new SlashCommandBuilder()
+              .setName('ping')
+              .setDescription('Replies with "Pong!"')
+              .addStringOption(option => 
+                  option.setName('type')
+                      .setDescription('type')
+                      .setRequired(false)
+                      .addChoices(
+                          { name: 'ws', value: 'ws' },
+                          { name: 'api', value: 'api' }
+                      )
+              )`,
+        executeLogic: commonCommandLogic
+    };
+    const buttonBase = {
+        data: { customId: 'djs-builder' },
+        execute: 'async interaction => { await interaction.reply("Hello World!"); }'
+    };
+    const messageBase = {
+        data: {
+            content: 'hi',
+            includes: true
+        },
+        executeLogic: `
         const args = message.content.split(" ");
         if (args[0] === 'hi' && args[1] === 'djs') {
             await message.reply('Hello world!');
-        }
-    }
-}`;
-    const MessageFileJS = `const { Message } = require("discord.js");
-
-module.exports = {
-    data : {
-        content : 'hi',
-        includes : true,
-        //startsWith : true, other arguments
-        //endsWith : true,  other arguments
-    },
-    /** @param {Message} message */
-    async execute(message){
-        const args = message.content.split(" ");
-        if(args[0] === 'hi' && args[1] === 'djs'){
-            await message.reply('Hello world!');
-        }
-    }
-}`;
-    const tsConfig = `{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "outDir": "./dist",
-    "rootDir": "./",
-    "resolveJsonModule": true,
-    "noImplicitAny": true
-  },
-  "include": [
-    "./index.ts",
-    "./slash_commands/**/*",
-    "./messages/**/*",
-    "./buttons/**/*"
-  ],
-  "exclude": ["node_modules", "**/*.test.ts"]
-}
-`;
-    return {
-        MessageFileJS,
-        MessageFileTS,
-        commandFile,
-        commandFileTS,
-        buttonFile,
-        buttonFileTS,
-        tsConfig,
+        }`
     };
+    const commandFile = `${isESM ? 'import { Colors, SlashCommandFile, OptionType, ButtonCommandFile, MessageCommandFile } from "djsify"\nimport { SlashCommandBuilder } from "discord.js"' : 'const { Colors, SlashCommandFile, OptionType, ButtonCommandFile, MessageCommandFile } = require("djsify")\nconst { SlashCommandBuilder } = require("discord.js")'}
+    ${isESM ? '' : '\n'}
+    ${!isTS ? `/**
+ * @type {SlashCommandFile}
+ */` : ''}
+    const command${isTS ? ':SlashCommandFile' : ''} = {
+          data: ${commandBase.data},
+          async execute(interaction) {${commandBase.executeLogic}
+          }
+    };
+    ${isESM ? 'export default command;' : 'module.exports = command;'}`;
+    const buttonFile = `${isESM ? 'import { ButtonCommandFile } from "djsify";' : 'const { ButtonCommandFile } = require("djsify");'}
+  ${isTS ? `/**
+    * @type {ButtonCommandFile}
+    */` : ''}
+  const button${isTS ? ': ButtonCommandFile' : ''} = {
+        data: ${JSON.stringify(buttonBase.data)},
+        execute: ${buttonBase.execute}
+  };
+  ${isESM ? 'export default button;' : 'module.exports = button;'}`;
+    const messageFile = `${isESM ? `import { MessageCommandFile } from "djsify";` : 'const { MessageCommandFile } = require("djsify")'}
+  /**
+ * @type {MessageCommandFile}
+ */
+  const message${isTS ? ':MessageCommandFile' : ''} = {
+        data: ${JSON.stringify(messageBase.data)},
+        async execute(message) {${messageBase.executeLogic}
+        }
+  };
+    ${isESM ? 'export default message;' : 'module.exports = message;'}`;
+    const tsConfig = {
+        compilerOptions: {
+            target: "ES2022",
+            module: isESM ? "NodeNext" : "commonjs",
+            strict: true,
+            esModuleInterop: true,
+            skipLibCheck: true,
+            forceConsistentCasingInFileNames: true,
+            outDir: "./dist",
+            rootDir: "./",
+            resolveJsonModule: true,
+            moduleResolution: isESM ? "NodeNext" : "Node",
+            noImplicitAny: true
+        },
+        include: [
+            "./**/*"
+        ],
+        exclude: ["node_modules", "**/*.test.ts"]
+    };
+    return {
+        MessageFileJS: messageFile,
+        MessageFileTS: messageFile,
+        commandFile,
+        commandFileTS: commandFile,
+        buttonFile,
+        buttonFileTS: buttonFile,
+        tsConfig: JSON.stringify(tsConfig, null, 2)
+    };
+}
+const baseConfig = (typeLanguage, botToken, type) => ({
+    type: typeLanguage,
+    buttonOn: true,
+    slashCommandsOn: true,
+    module: type,
+    botToken,
+    features: {
+        advancedMessageHandling: true,
+        customEmbedsSupport: true,
+        interactiveComponents: true,
+        voiceChannelIntegration: true,
+        multiServerSupport: true,
+        databaseIntegration: true,
+        webhookManagement: true,
+        autoModeration: true,
+        customCommandCreation: true,
+        roleManagement: true,
+    },
+    performance: {
+        optimizedCaching: true,
+        asyncProcessing: true,
+        lowLatencyResponses: true,
+    },
+    security: {
+        encryptedDataStorage: true,
+        rateLimiting: true,
+        antiSpamProtection: true,
+    },
+    analytics: {
+        userActivityTracking: true,
+        commandUsageStatistics: true,
+        performanceMetrics: true,
+    },
+    customization: {
+        theming: true,
+        localization: true,
+    },
+    version: "2.0.0",
+    codename: "djsify",
+});
+const prettierConfig = {
+    semi: true,
+    singleQuote: true,
+    trailingComma: 'all',
+    printWidth: 100,
+    tabWidth: 2,
+    bracketSpacing: true,
+    arrowParens: 'always',
+    endOfLine: 'lf',
+    useTabs: false,
+    quoteProps: 'as-needed',
+    jsxSingleQuote: false,
+    jsxBracketSameLine: false,
+    parser: 'typescript'
+};
+async function installPackage(pkgName, version = 'latest', isGlobal = false) {
+    const start = performance.now();
+    try {
+        let i = 0;
+        const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+        const interval = setInterval(() => {
+            process.stdout.write(chalk.cyan(`\r${spinner[i]} 📦 Installing packages`));
+            i = (i + 1) % spinner.length;
+        }, 80);
+        await new Promise((resolve, reject) => {
+            exec(`npm install ${pkgName}@${version} ${isGlobal ? '-g' : ''} --save`, { timeout: 60000 }, (error, _, stderr) => {
+                clearInterval(interval);
+                if (error) {
+                    console.error(chalk.red(stderr));
+                    reject(error);
+                }
+                else {
+                    resolve();
+                }
+            });
+        });
+    }
+    catch (error) {
+        console.error(chalk.red(`❌ Error installing ${pkgName}@${version}:`), error);
+        throw error;
+    }
+    const end = performance.now();
+    return end - start;
 }
