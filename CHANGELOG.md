@@ -1,3 +1,7 @@
+## [1.7.4] - 2024-03-14
+### Fixed
+- Fixed an issue where messageCreate event handler did not properly process commands when command.data.content was defined as an array
+
 ## [1.7.3] - 2024-02-07
 - Improved error handling
 
