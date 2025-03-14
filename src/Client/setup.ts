@@ -132,6 +132,15 @@ class djsClient {
      * @param {boolean} [options.allowBots=false] - Allow bot interactions
      * @param {boolean} [options.allowDM=true] - Allow DM interactions
      * @param {boolean} [options.isPrivateBot=false] - Private bot mode
+     * @param {Array} [options.allowedGuilds] - Allowed guild IDs
+     * @param {Object} [options.consoleConfig] - Console configuration
+     * @param {boolean} [options.consoleConfig.error=true] - Enable error logging
+     * @param {boolean} [options.consoleConfig.warn=true] - Enable warning logging
+     * @param {boolean} [options.consoleConfig.info=true] - Enable info logging
+     * @param {boolean} [options.consoleConfig.debug=true] - Enable debug logging
+     * @param {boolean} [options.consoleConfig.trace=true] - Enable trace logging
+     * @param {boolean} [options.consoleConfig.log=true] - Enable log logging
+     * @param {Object} [options.preCommandHook] - Pre-command hook
      */
     constructor({
         token,
@@ -205,8 +214,8 @@ class djsClient {
         allowBots?: boolean;
         allowDM?: boolean;
         isPrivateBot?: boolean;
-        allowedGuilds: string[] | string | null;
-        preCommandHook: {
+        allowedGuilds?: string[] | string | null;
+        preCommandHook?: {
             ready?: () => void;
             message?: (message: MessageInteraction, callBack: (...args: [MessageInteraction, ...any]) => Promise<void> | void) => Promise<void> | void;
             slashCommand?: (command: SlashCommandInteraction, callBack: (...args: [SlashCommandInteraction, ...any]) => Promise<void> | void) => Promise<void> | void;
@@ -475,7 +484,7 @@ class djsClient {
         if (messageCommandsOn) {
             loadCommands(messageCommandDirectory, messageCommandDir || this.messageCommandDirectoryName, this.client.messageCommands);
             const Warned: Set<string> = new Set([]);
-
+            const allowedMessageCache = new Map<string, boolean>();
             this.client.on('messageCreate', async (m: OmitPartialGroupDMChannel<Message<boolean>> & { client: Client<boolean> & { djsClient?: djsClient }, djsClient?: djsClient }) => {
                 if ((m.author.bot && m.author.id === this?.client?.user?.id) || (!allowBots && m.author.bot)) return;
 
@@ -490,13 +499,29 @@ class djsClient {
                 if (!command) return;
 
                 try {
-                    const contents = Array.isArray(command.data.content) ? command.data.content : [command.data.content];
-                    const shouldExecute = command.data.startsWith && contents.some(content => m.content.startsWith(content)) ||
-                        command.data.includes && contents.some(content => m.content.includes(content)) ||
-                        command.data.endsWith && contents.some(content => m.content.endsWith(content)) ||
-                        contents.includes(m.content);
-                    if (!shouldExecute) return;
-                    if (Warned.has(m.author.id)) return;
+                    const cacheKey = `${commandName}-${command.data?.startsWith}-${command.data?.includes}-${command.data?.endsWith}`;
+                    let shouldExecute = allowedMessageCache.get(cacheKey);
+                    
+                    if (shouldExecute === undefined) {
+                        const contents = Array.isArray(command.data?.content) ? command.data.content : [command.data?.content];
+                        
+                        if (command.data?.startsWith) {
+                            shouldExecute = contents.some(content => commandName.startsWith(content));
+                        } else if (command.data?.includes) {
+                            shouldExecute = contents.some(content => commandName.includes(content));
+                        } else if (command.data?.endsWith) {
+                            shouldExecute = contents.some(content => commandName.endsWith(content));
+                        } else {
+                            shouldExecute = contents.includes(commandName);
+                        }
+                        
+                        allowedMessageCache.set(cacheKey, shouldExecute);
+                    }
+                    
+                    if (!shouldExecute)
+                        return;
+                    if (Warned.has(m.author.id))
+                        return;
                     if (isPrivateBot && (!m?.guild || !this.allowedGuilds?.has(m?.guildId))) {
                         Warned.add(m.author.id);
                         return m.reply({
@@ -505,9 +530,10 @@ class djsClient {
                                 color: Colors.Red
                             }]
                         });
-                    };
-                    Object.assign(m.client, { djsClient: this });
-                    Object.assign(m, { djsClient: this });
+                    }
+                    
+                    m.client.djsClient = this;
+                    m.djsClient = this;
                     const callback = command.execute;
                     await preCommandHook?.message?.(m, callback);
                 } catch (err) {
