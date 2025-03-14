@@ -7,9 +7,9 @@ class ButtonCommandFile {
      */
     constructor(data: {
         customId: string;
-        startsWith: boolean;
-        includes: boolean;
-        endsWith: boolean;
+        startsWith?: boolean;
+        includes?: boolean;
+        endsWith?: boolean;
     }, execute: (interaction: ButtoncommandInteraction, ...others: any[]) => Promise<void> | void) {
         this.data = data;
         this.execute = execute;
@@ -17,9 +17,9 @@ class ButtonCommandFile {
 
     declare data: {
         customId: string;
-        startsWith: boolean;
-        includes: boolean;
-        endsWith: boolean;
+        startsWith?: boolean;
+        includes?: boolean;
+        endsWith?: boolean;
     };
     declare execute: (interaction: ButtoncommandInteraction) => Promise<void> | void;
 };
