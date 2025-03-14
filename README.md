@@ -54,7 +54,23 @@ pnpm add djsify
 ```
 
 Make sure you have Node.js 16.9.0 or newer installed.
+For CLI usage:
+```bash
+# Install the package globally
+npm install -g djsify
 
+# Setup your project configuration
+djs setup
+
+# Build for production
+djs build
+
+# View all available commands
+djs help
+
+# Update djsify to latest version
+djs update
+```
 ## 🚀 Quick Start
 
 Getting started with djsify is incredibly simple:
@@ -757,8 +773,10 @@ djsify is licensed under the MIT License. See the [LICENSE](./LICENSE.md) file f
 ---
 
 ## Changelog
-## [1.7.1] - 2024-02-07
-- Fixed a bug where bot cannot load .js Commands
+
+## [1.7.4] - 2024-03-14
+### Improvement
+- Enchanced cli
 
 for more information please see [CHANGELOG](./CHANGELOG.md)
 
